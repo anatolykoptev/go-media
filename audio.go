@@ -7,18 +7,12 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
-)
-
-const (
-	ffmpegTimeout = 60 * time.Second
-	probeTimeout  = 10 * time.Second
 )
 
 // ProbeDuration returns video/audio duration in seconds using ffprobe.
 // Returns 0 if ffprobe fails or file has no duration.
 func ProbeDuration(ctx context.Context, path string) int {
-	probeCtx, cancel := context.WithTimeout(ctx, probeTimeout)
+	probeCtx, cancel := context.WithTimeout(ctx, DefaultProbeTimeout)
 	defer cancel()
 
 	out, err := exec.CommandContext(probeCtx, "ffprobe",
@@ -41,7 +35,7 @@ func ProbeDuration(ctx context.Context, path string) int {
 // ExtractAudioChunk extracts a WAV audio chunk from a video file using ffmpeg.
 // Output is 16kHz mono PCM suitable for Whisper.
 func ExtractAudioChunk(ctx context.Context, videoPath, outputPath string, offsetSec, durationSec int) error {
-	ffCtx, cancel := context.WithTimeout(ctx, ffmpegTimeout)
+	ffCtx, cancel := context.WithTimeout(ctx, DefaultFFmpegTimeout)
 	defer cancel()
 
 	cmd := exec.CommandContext(ffCtx, "ffmpeg",
@@ -83,12 +77,14 @@ func ChunkAndTranscribe(ctx context.Context, videoPath, tempDir string, t Transc
 
 	var chunks []Chunk
 	var texts []string
+	var failedChunks int
 
 	for offset := 0; offset < duration; offset += opts.ChunkSec {
 		chunkPath := filepath.Join(tempDir, fmt.Sprintf("%s_%d.wav", name, offset))
 
 		if err := ExtractAudioChunk(ctx, videoPath, chunkPath, offset, opts.ChunkSec); err != nil {
 			cleanupFile(chunkPath)
+			failedChunks++
 			continue
 		}
 
@@ -96,6 +92,7 @@ func ChunkAndTranscribe(ctx context.Context, videoPath, tempDir string, t Transc
 		cleanupFile(chunkPath)
 
 		if err != nil {
+			failedChunks++
 			continue
 		}
 
@@ -117,9 +114,10 @@ func ChunkAndTranscribe(ctx context.Context, videoPath, tempDir string, t Transc
 	}
 
 	return &Transcription{
-		Text:     strings.Join(texts, " "),
-		Duration: float64(duration),
-		Chunks:   chunks,
+		Text:         strings.Join(texts, " "),
+		Duration:     float64(duration),
+		Chunks:       chunks,
+		FailedChunks: failedChunks,
 	}
 }
 

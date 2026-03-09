@@ -6,10 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"time"
 )
-
-const defaultDownloadTimeout = 120 * time.Second
 
 // HTTPDoer abstracts an HTTP client for testing.
 type HTTPDoer interface {
@@ -18,7 +15,7 @@ type HTTPDoer interface {
 
 // DownloadFile downloads a URL to a local file with timeout and size limit.
 func DownloadFile(ctx context.Context, client HTTPDoer, url, destPath string, maxSize int64) error {
-	dlCtx, cancel := context.WithTimeout(ctx, defaultDownloadTimeout)
+	dlCtx, cancel := context.WithTimeout(ctx, DefaultDownloadTimeout)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(dlCtx, http.MethodGet, url, nil)
@@ -46,7 +43,15 @@ func DownloadFile(ctx context.Context, client HTTPDoer, url, destPath string, ma
 	if err != nil {
 		return fmt.Errorf("create file: %w", err)
 	}
-	defer f.Close() //nolint:errcheck // temp file
+
+	// Clean up partial file on any error after this point.
+	success := false
+	defer func() {
+		_ = f.Close()
+		if !success {
+			_ = os.Remove(destPath)
+		}
+	}()
 
 	var reader io.Reader = resp.Body
 	if maxSize > 0 {
@@ -59,9 +64,9 @@ func DownloadFile(ctx context.Context, client HTTPDoer, url, destPath string, ma
 	}
 
 	if maxSize > 0 && written > maxSize {
-		_ = os.Remove(destPath)
 		return fmt.Errorf("file too large: %d bytes (limit %d)", written, maxSize)
 	}
 
+	success = true
 	return nil
 }
