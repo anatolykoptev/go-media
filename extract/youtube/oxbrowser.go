@@ -34,8 +34,10 @@ type fetchResponse struct {
 type playerResponse struct {
 	VideoDetails struct {
 		Title       string `json:"title"`
+		Author      string `json:"author"`
 		Description string `json:"shortDescription"`
 		LengthSec   string `json:"lengthSeconds"`
+		ViewCount   string `json:"viewCount"`
 	} `json:"videoDetails"`
 	StreamingData struct {
 		Formats         []playerFormat `json:"formats"`
@@ -114,10 +116,14 @@ func buildMedia(videoURL string, pr *playerResponse) (*media.Media, error) {
 		Platform:    "youtube",
 		URL:         videoURL,
 		Title:       pr.VideoDetails.Title,
+		Author:      pr.VideoDetails.Author,
 		Description: pr.VideoDetails.Description,
 	}
 	if sec, err := strconv.Atoi(pr.VideoDetails.LengthSec); err == nil {
 		m.Duration = time.Duration(sec) * time.Second
+	}
+	if views, err := strconv.ParseInt(pr.VideoDetails.ViewCount, 10, 64); err == nil {
+		m.Stats.Views = views
 	}
 
 	combined := filterDirect(pr.StreamingData.Formats)

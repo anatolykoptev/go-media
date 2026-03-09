@@ -116,13 +116,12 @@ func (b *ytdlpBackend) populateFromInfoJSON(m *media.Media, path string) {
 	if info.Thumbnail != "" {
 		m.Metadata["thumbnail"] = info.Thumbnail
 	}
-	if info.Uploader != "" {
-		m.Metadata["uploader"] = info.Uploader
-	}
+
+	m.Author = info.Uploader
 	if info.ViewCount != nil {
-		m.Metadata["view_count"] = fmt.Sprintf("%.0f", *info.ViewCount)
+		m.Stats.Views = int64(*info.ViewCount)
 	}
 	if info.LikeCount != nil {
-		m.Metadata["like_count"] = fmt.Sprintf("%.0f", *info.LikeCount)
+		m.Stats.Likes = int64(*info.LikeCount)
 	}
 }

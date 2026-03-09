@@ -65,6 +65,20 @@ func (e *Extractor) Extract(ctx context.Context, rawURL string) (*media.Media, e
 		Metadata:    make(map[string]string),
 	}
 
+	// Author info
+	if post.Author.Username != "" {
+		m.Author = "@" + post.Author.Username
+		if post.Author.FullName != "" {
+			m.Author = post.Author.FullName + " (@" + post.Author.Username + ")"
+		}
+	}
+
+	// Engagement stats
+	m.Stats = media.MediaStats{
+		Likes:    int64(post.LikeCount),
+		Comments: int64(post.ReplyCount),
+	}
+
 	code := igCode
 	if code == "" {
 		code = threadsCode
