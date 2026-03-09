@@ -19,24 +19,19 @@ Extract Instagram/Threads code from vaelor into go-media.
 - [x] CI/CD: GitHub Actions (lint + test)
 - [x] Documentation: design doc, architecture, compare, README
 
-### Known Issues (v0.1.0)
+## v0.1.1 — Quality Fixes ✅
 
-- `transcribe/gostt` has no tests (needs go-stt mock or interface)
-- `ChunkAndTranscribe()` silently skips failed chunks — no error count returned
-- `go.sum` needs `go mod tidy` after clean clone (transitive deps from go-stealth)
-- Pre-commit hook requires `GOWORK=off` (parent go.work interference)
-- No `Process()` integration test (only `Extract()` tested in processor)
-- Typo: `hashMultipler` → should be `hashMultiplier`
+- [x] Add tests for `transcribe/gostt` package (4 tests)
+- [x] Add `Process()` integration tests (3 tests: success, download error, no transcriber)
+- [x] Add `FailedChunks` tracking to `ChunkAndTranscribe()`
+- [x] Fix `hashMultipler` typo → `hashMultiplier`
+- [x] Clean up partial file on download context cancellation
+- [x] Consolidate constants into `defaults.go`
+- [x] Fix pre-commit hook for go.work (GOWORK=off)
+- [x] Add codecov to CI workflow
+- [x] Update roadmap
 
-## v0.1.1 — Quality Fixes
-
-- [ ] Add tests for `transcribe/gostt` package
-- [ ] Add `Process()` integration test with mock transcriber
-- [ ] Return chunk error count from `ChunkAndTranscribe()` (or log callback)
-- [ ] Fix `hashMultipler` typo → `hashMultiplier`
-- [ ] Add input validation to `Options` (ChunkSec > 0, MaxSize >= 0)
-- [ ] Clean up partial file on download context cancellation
-- [ ] Add codecov to CI workflow
+Total: 29 tests, 0 lint issues.
 
 ## v0.2.0 — YouTube
 
