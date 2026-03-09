@@ -34,7 +34,7 @@ make build   # build all packages
 |---------|---------|
 | `media` (root) | Core types, interfaces, processor, download, audio |
 | `extract/instagram` | Instagram/Threads extractor (go-threads) |
-| `extract/youtube` | YouTube extractor (kkdai/youtube) — planned |
+| `extract/youtube` | YouTube extractor (kkdai → go-ytdlp → ox-browser fallback) |
 | `extract/twitter` | Twitter/X syndication — planned |
 | `extract/reddit` | Reddit DASH — planned |
 | `transcribe/openai` | OpenAI-compatible STT (ox-whisper, Groq) |

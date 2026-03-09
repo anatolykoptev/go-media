@@ -58,6 +58,28 @@ func ExtractAudioChunk(ctx context.Context, videoPath, outputPath string, offset
 	return nil
 }
 
+// MergeAudioVideo combines a video-only and audio-only file into a single MP4 using ffmpeg.
+// Used for DASH streams where video and audio are separate.
+func MergeAudioVideo(ctx context.Context, videoPath, audioPath, outputPath string) error {
+	ffCtx, cancel := context.WithTimeout(ctx, DefaultFFmpegTimeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ffCtx, "ffmpeg",
+		"-i", videoPath,
+		"-i", audioPath,
+		"-c", "copy",
+		"-y",
+		outputPath,
+	)
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("ffmpeg merge audio+video: %w", err)
+	}
+	return nil
+}
+
 // ChunkAndTranscribe splits audio into chunks and transcribes each one.
 // Returns nil if transcriber is nil or unavailable.
 func ChunkAndTranscribe(ctx context.Context, videoPath, tempDir string, t Transcriber, opts Options) *Transcription {

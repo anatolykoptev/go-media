@@ -54,7 +54,7 @@ func main() {
 | Platform | Status | Package |
 |----------|--------|---------|
 | Instagram/Threads | ✅ | `extract/instagram` |
-| YouTube | Planned | `extract/youtube` |
+| YouTube | ✅ | `extract/youtube` |
 | Twitter/X | Planned | `extract/twitter` |
 | Reddit | Planned | `extract/reddit` |
 | Telegram | Planned | `extract/telegram` |

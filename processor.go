@@ -42,7 +42,7 @@ func (p *Processor) Process(ctx context.Context, url string, opts Options) (*Res
 		return nil, fmt.Errorf("extract: %w", err)
 	}
 
-	if m.VideoURL == "" {
+	if m.VideoURL == "" && m.LocalPath == "" {
 		return nil, fmt.Errorf("no video URL found for %s", url)
 	}
 
@@ -55,11 +55,25 @@ func (p *Processor) Process(ctx context.Context, url string, opts Options) (*Res
 		return nil, fmt.Errorf("create temp dir: %w", err)
 	}
 
-	// Download video
-	videoPath := filepath.Join(tempDir, fmt.Sprintf("%s_%s.mp4", m.Platform, sanitizeFilename(url)))
+	var videoPath string
 
-	if err := DownloadFile(ctx, p.httpClient, m.VideoURL, videoPath, opts.MaxSize); err != nil {
-		return nil, fmt.Errorf("download: %w", err)
+	if m.LocalPath != "" {
+		// Extractor already downloaded the file (e.g. yt-dlp)
+		videoPath = m.LocalPath
+	} else {
+		// Download video
+		videoPath = filepath.Join(tempDir, fmt.Sprintf("%s_%s.mp4", m.Platform, sanitizeFilename(url)))
+		if err := DownloadFile(ctx, p.httpClient, m.VideoURL, videoPath, opts.MaxSize); err != nil {
+			return nil, fmt.Errorf("download: %w", err)
+		}
+
+		// DASH: merge separate audio stream if present
+		if m.AudioURL != "" {
+			videoPath, err = p.mergeDASH(ctx, videoPath, m.AudioURL, opts.MaxSize)
+			if err != nil {
+				return nil, fmt.Errorf("dash merge: %w", err)
+			}
+		}
 	}
 
 	// Transcribe (optional)
@@ -78,6 +92,27 @@ func (p *Processor) Process(ctx context.Context, url string, opts Options) (*Res
 // Platforms returns names of all registered extractors.
 func (p *Processor) Platforms() []string {
 	return p.registry.Platforms()
+}
+
+// mergeDASH downloads a separate audio stream and muxes it with the video using ffmpeg.
+func (p *Processor) mergeDASH(ctx context.Context, videoPath, audioURL string, maxSize int64) (string, error) {
+	audioPath := videoPath + ".audio.m4a"
+	if err := DownloadFile(ctx, p.httpClient, audioURL, audioPath, maxSize); err != nil {
+		return videoPath, fmt.Errorf("download audio: %w", err) //nolint:wrapcheck // already wrapped
+	}
+	defer cleanupFile(audioPath)
+
+	mergedPath := videoPath + ".merged.mp4"
+	if err := MergeAudioVideo(ctx, videoPath, audioPath, mergedPath); err != nil {
+		return videoPath, err
+	}
+
+	// Replace original video-only file with merged
+	_ = os.Remove(videoPath)
+	if err := os.Rename(mergedPath, videoPath); err != nil {
+		return mergedPath, nil //nolint:nilerr // merged file exists at mergedPath
+	}
+	return videoPath, nil
 }
 
 // sanitizeFilename creates a safe filename from a URL.

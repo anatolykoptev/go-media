@@ -9,6 +9,8 @@ type Media struct {
 	Platform    string            // platform name: "instagram", "youtube", etc.
 	URL         string            // original input URL
 	VideoURL    string            // direct video CDN URL
+	AudioURL    string            // separate audio URL (for DASH merge)
+	LocalPath   string            // path to already-downloaded file (skips download)
 	Title       string            // post/video title
 	Description string            // post caption or video description
 	Duration    time.Duration     // video duration (zero if unknown)
