@@ -6,76 +6,71 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"regexp"
-	"sort"
-	"strconv"
-	"strings"
 	"time"
 
 	media "github.com/anatolykoptev/go-media"
 )
 
-var playerResponseRe = regexp.MustCompile(
-	`var\s+ytInitialPlayerResponse\s*=\s*(\{.+?\})\s*;`,
-)
-
-// oxBackend extracts YouTube video URLs by fetching the page via ox-browser.
+// oxBackend delegates video extraction to ox-browser's /media/download endpoint.
+// ox-browser handles page fetch, YouTube parser, download, and DASH merge.
 type oxBackend struct {
 	baseURL string
 	client  *http.Client
 }
 
-type fetchResponse struct {
-	URL    string `json:"url"`
-	Status int    `json:"status"`
-	Body   string `json:"body"`
+// mediaDownloadRequest is the ox-browser /media/download API request.
+type mediaDownloadRequest struct {
+	URL       string `json:"url"`
+	MediaType string `json:"media_type"`
+	MaxHeight int    `json:"max_height,omitempty"`
+	MaxSizeMB int    `json:"max_size_mb,omitempty"`
 }
 
-type playerResponse struct {
-	VideoDetails struct {
-		Title       string `json:"title"`
-		Author      string `json:"author"`
-		Description string `json:"shortDescription"`
-		LengthSec   string `json:"lengthSeconds"`
-		ViewCount   string `json:"viewCount"`
-	} `json:"videoDetails"`
-	StreamingData struct {
-		Formats         []playerFormat `json:"formats"`
-		AdaptiveFormats []playerFormat `json:"adaptiveFormats"`
-	} `json:"streamingData"`
+// mediaDownloadResponse is the ox-browser /media/download API response.
+type mediaDownloadResponse struct {
+	MediaType   string        `json:"media_type"`
+	Files       []mediaFile   `json:"files"`
+	Platform    string        `json:"platform"`
+	Title       string        `json:"title"`
+	Author      string        `json:"author"`
+	Description string        `json:"description"`
+	DurationSec *float64      `json:"duration_secs"`
+	Stats       *mediaStats   `json:"stats"`
+	Quality     *mediaQuality `json:"quality"`
+	Merged      bool          `json:"merged"`
+	Error       string        `json:"error"`
 }
 
-type playerFormat struct {
-	ITag     int    `json:"itag"`
-	URL      string `json:"url"`
-	MimeType string `json:"mimeType"`
-	Width    int    `json:"width"`
-	Height   int    `json:"height"`
-	Bitrate  int    `json:"bitrate"`
+type mediaFile struct {
+	Path      string `json:"path"`
+	SizeBytes int64  `json:"size_bytes"`
+	Width     int    `json:"width"`
+	Height    int    `json:"height"`
 }
 
-// extract fetches the YouTube page via ox-browser and parses the embedded player response.
+type mediaStats struct {
+	Views    *int64 `json:"views"`
+	Likes    *int64 `json:"likes"`
+	Comments *int64 `json:"comments"`
+}
+
+type mediaQuality struct {
+	Width  int `json:"width"`
+	Height int `json:"height"`
+}
+
+// extract calls ox-browser /media/download which handles everything:
+// page fetch, YouTube playerResponse parsing, download, DASH merge.
 func (b *oxBackend) extract(ctx context.Context, videoURL string) (*media.Media, error) {
-	html, err := b.fetchPage(ctx, videoURL)
-	if err != nil {
-		return nil, err
-	}
-	pr, err := parsePlayerResponse(html)
-	if err != nil {
-		return nil, err
-	}
-	return buildMedia(videoURL, pr)
-}
-
-func (b *oxBackend) fetchPage(ctx context.Context, videoURL string) (string, error) {
-	payload, _ := json.Marshal(map[string]any{
-		"url":          videoURL,
-		"save_to_file": false,
+	payload, _ := json.Marshal(mediaDownloadRequest{
+		URL:       videoURL,
+		MediaType: "video",
 	})
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
-		b.baseURL+"/fetch-smart", bytes.NewReader(payload))
+		b.baseURL+"/media/download", bytes.NewReader(payload))
 	if err != nil {
-		return "", fmt.Errorf("oxbrowser: %w", err)
+		return nil, fmt.Errorf("oxbrowser: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
@@ -85,118 +80,60 @@ func (b *oxBackend) fetchPage(ctx context.Context, videoURL string) (string, err
 	}
 	resp, err := cl.Do(req) //nolint:gosec // URL from trusted config
 	if err != nil {
-		return "", fmt.Errorf("oxbrowser: unavailable: %w", err)
+		return nil, fmt.Errorf("oxbrowser: unavailable: %w", err)
 	}
 	defer resp.Body.Close() //nolint:errcheck
 
-	var fr fetchResponse
-	if err := json.NewDecoder(resp.Body).Decode(&fr); err != nil {
-		return "", fmt.Errorf("oxbrowser: decode response: %w", err)
+	if resp.StatusCode >= http.StatusBadRequest {
+		var errResp mediaDownloadResponse
+		_ = json.NewDecoder(resp.Body).Decode(&errResp)
+		return nil, fmt.Errorf("oxbrowser: %s (HTTP %d)", errResp.Error, resp.StatusCode)
 	}
-	if fr.Status != 0 && fr.Status >= 400 {
-		return "", fmt.Errorf("oxbrowser: upstream status %d", fr.Status)
+
+	var dr mediaDownloadResponse
+	if err := json.NewDecoder(resp.Body).Decode(&dr); err != nil {
+		return nil, fmt.Errorf("oxbrowser: decode: %w", err)
 	}
-	return fr.Body, nil
+	if len(dr.Files) == 0 {
+		return nil, fmt.Errorf("oxbrowser: no files returned")
+	}
+
+	return mapToMedia(videoURL, &dr), nil
 }
 
-func parsePlayerResponse(html string) (*playerResponse, error) {
-	m := playerResponseRe.FindStringSubmatch(html)
-	if m == nil {
-		return nil, fmt.Errorf("oxbrowser: player response not found")
-	}
-	var pr playerResponse
-	if err := json.Unmarshal([]byte(m[1]), &pr); err != nil {
-		return nil, fmt.Errorf("oxbrowser: parse player response: %w", err)
-	}
-	return &pr, nil
-}
-
-func buildMedia(videoURL string, pr *playerResponse) (*media.Media, error) {
+// mapToMedia converts ox-browser response to go-media Media struct.
+func mapToMedia(videoURL string, dr *mediaDownloadResponse) *media.Media {
 	m := &media.Media{
-		Platform:    "youtube",
+		Platform:    dr.Platform,
 		URL:         videoURL,
-		Title:       pr.VideoDetails.Title,
-		Author:      pr.VideoDetails.Author,
-		Description: pr.VideoDetails.Description,
-	}
-	if sec, err := strconv.Atoi(pr.VideoDetails.LengthSec); err == nil {
-		m.Duration = time.Duration(sec) * time.Second
-	}
-	if views, err := strconv.ParseInt(pr.VideoDetails.ViewCount, 10, 64); err == nil {
-		m.Stats.Views = views
+		Title:       dr.Title,
+		Author:      dr.Author,
+		Description: dr.Description,
+		LocalPath:   dr.Files[0].Path,
 	}
 
-	combined := filterDirect(pr.StreamingData.Formats)
-	adaptive := filterDirect(pr.StreamingData.AdaptiveFormats)
-	if len(combined) == 0 && len(adaptive) == 0 {
-		return nil, fmt.Errorf("oxbrowser: no direct URLs available")
+	if dr.DurationSec != nil {
+		m.Duration = time.Duration(*dr.DurationSec * float64(time.Second))
+	}
+	if dr.Stats != nil {
+		if dr.Stats.Views != nil {
+			m.Stats.Views = *dr.Stats.Views
+		}
+		if dr.Stats.Likes != nil {
+			m.Stats.Likes = *dr.Stats.Likes
+		}
+		if dr.Stats.Comments != nil {
+			m.Stats.Comments = *dr.Stats.Comments
+		}
+	}
+	if dr.Quality != nil {
+		label := fmt.Sprintf("%dp", dr.Quality.Height)
+		m.Qualities = []media.Quality{{
+			Label:  label,
+			Width:  dr.Quality.Width,
+			Height: dr.Quality.Height,
+		}}
 	}
 
-	if len(combined) > 0 {
-		m.VideoURL = pickBest(combined).URL
-	} else {
-		pickAdaptive(m, adaptive)
-	}
-	m.Qualities = oxQualities(combined, adaptive)
-	return m, nil
-}
-
-func filterDirect(fmts []playerFormat) []playerFormat {
-	out := make([]playerFormat, 0, len(fmts))
-	for _, f := range fmts {
-		if f.URL != "" {
-			out = append(out, f)
-		}
-	}
-	return out
-}
-
-func pickBest(fmts []playerFormat) playerFormat {
-	sort.Slice(fmts, func(i, j int) bool {
-		if fmts[i].Height != fmts[j].Height {
-			return fmts[i].Height > fmts[j].Height
-		}
-		return fmts[i].Bitrate > fmts[j].Bitrate
-	})
-	return fmts[0]
-}
-
-func pickAdaptive(m *media.Media, fmts []playerFormat) {
-	var videos, audios []playerFormat
-	for _, f := range fmts {
-		switch {
-		case strings.HasPrefix(f.MimeType, "video/"):
-			videos = append(videos, f)
-		case strings.HasPrefix(f.MimeType, "audio/"):
-			audios = append(audios, f)
-		}
-	}
-	if len(videos) > 0 {
-		m.VideoURL = pickBest(videos).URL
-	}
-	if len(audios) > 0 {
-		best := audios[0]
-		for _, a := range audios[1:] {
-			if a.Bitrate > best.Bitrate {
-				best = a
-			}
-		}
-		m.AudioURL = best.URL
-	}
-}
-
-func oxQualities(combined, adaptive []playerFormat) []media.Quality {
-	all := append(combined, adaptive...) //nolint:gocritic
-	qs := make([]media.Quality, 0, len(all))
-	for _, f := range all {
-		if f.Height == 0 && !strings.HasPrefix(f.MimeType, "audio/") {
-			continue
-		}
-		label := "audio"
-		if f.Height > 0 {
-			label = strconv.Itoa(f.Height) + "p"
-		}
-		qs = append(qs, media.Quality{Label: label, URL: f.URL, Width: f.Width, Height: f.Height})
-	}
-	return qs
+	return m
 }

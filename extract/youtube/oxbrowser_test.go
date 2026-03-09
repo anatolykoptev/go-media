@@ -1,129 +1,73 @@
 package youtube
 
 import (
-	"strings"
 	"testing"
 	"time"
 )
 
-const samplePlayerHTML = `<html><head></head><body>
-<script>var ytInitialPlayerResponse = {"videoDetails":{"title":"Test Video","shortDescription":"A test description","lengthSeconds":"120"},"streamingData":{"formats":[{"itag":18,"url":"https://example.com/video.mp4","mimeType":"video/mp4","width":640,"height":360,"bitrate":500000}],"adaptiveFormats":[{"itag":137,"url":"https://example.com/hd.mp4","mimeType":"video/mp4","width":1920,"height":1080,"bitrate":4000000},{"itag":140,"url":"https://example.com/audio.m4a","mimeType":"audio/mp4","width":0,"height":0,"bitrate":128000}]}};</script>
-</body></html>`
-
-func TestParsePlayerResponse(t *testing.T) {
-	pr, err := parsePlayerResponse(samplePlayerHTML)
-	if err != nil {
-		t.Fatalf("parsePlayerResponse: %v", err)
-	}
-	if pr.VideoDetails.Title != "Test Video" {
-		t.Errorf("title = %q, want %q", pr.VideoDetails.Title, "Test Video")
-	}
-	if pr.VideoDetails.Description != "A test description" {
-		t.Errorf("description = %q, want %q", pr.VideoDetails.Description, "A test description")
-	}
-	if pr.VideoDetails.LengthSec != "120" {
-		t.Errorf("lengthSeconds = %q, want %q", pr.VideoDetails.LengthSec, "120")
-	}
-	if len(pr.StreamingData.Formats) != 1 {
-		t.Errorf("formats count = %d, want 1", len(pr.StreamingData.Formats))
-	}
-	if len(pr.StreamingData.AdaptiveFormats) != 2 {
-		t.Errorf("adaptive formats count = %d, want 2", len(pr.StreamingData.AdaptiveFormats))
-	}
-}
-
-func TestParsePlayerResponseNotFound(t *testing.T) {
-	cases := []struct {
-		name string
-		html string
-	}{
-		{"empty", ""},
-		{"no script", "<html><body>Hello</body></html>"},
-		{"wrong var", `<script>var ytOtherData = {};</script>`},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			_, err := parsePlayerResponse(tc.html)
-			if err == nil {
-				t.Fatal("expected error for missing player response")
-			}
-			if !strings.Contains(err.Error(), "player response not found") {
-				t.Errorf("error = %v, want 'player response not found'", err)
-			}
-		})
-	}
-}
-
-func TestBuildMedia(t *testing.T) {
-	pr := &playerResponse{}
-	pr.VideoDetails.Title = "My Video"
-	pr.VideoDetails.Description = "My Description"
-	pr.VideoDetails.LengthSec = "90"
-	pr.StreamingData.Formats = []playerFormat{
-		{ITag: 18, URL: "https://example.com/360.mp4", MimeType: "video/mp4", Width: 640, Height: 360, Bitrate: 500000},
-		{ITag: 22, URL: "https://example.com/720.mp4", MimeType: "video/mp4", Width: 1280, Height: 720, Bitrate: 2000000},
+func TestMapToMedia(t *testing.T) {
+	dur := 120.0
+	views := int64(1000)
+	dr := &mediaDownloadResponse{
+		MediaType:   "video",
+		Files:       []mediaFile{{Path: "/tmp/ox-browser/media/yt_abc123.mp4", SizeBytes: 5000000, Width: 1280, Height: 720}},
+		Platform:    "youtube",
+		Title:       "Test Video",
+		Author:      "Test Author",
+		Description: "A test video",
+		DurationSec: &dur,
+		Stats:       &mediaStats{Views: &views},
+		Quality:     &mediaQuality{Width: 1280, Height: 720},
+		Merged:      false,
 	}
 
-	m, err := buildMedia("https://www.youtube.com/watch?v=test123", pr)
-	if err != nil {
-		t.Fatalf("buildMedia: %v", err)
-	}
+	m := mapToMedia("https://youtube.com/watch?v=test", dr)
+
 	if m.Platform != "youtube" {
-		t.Errorf("platform = %q, want %q", m.Platform, "youtube")
+		t.Errorf("platform = %q, want youtube", m.Platform)
 	}
-	if m.Title != "My Video" {
-		t.Errorf("title = %q, want %q", m.Title, "My Video")
+	if m.Title != "Test Video" {
+		t.Errorf("title = %q, want Test Video", m.Title)
 	}
-	if m.Description != "My Description" {
-		t.Errorf("description = %q, want %q", m.Description, "My Description")
+	if m.Author != "Test Author" {
+		t.Errorf("author = %q, want Test Author", m.Author)
 	}
-	if m.Duration != 90*time.Second {
-		t.Errorf("duration = %v, want %v", m.Duration, 90*time.Second)
+	if m.Description != "A test video" {
+		t.Errorf("description = %q, want A test video", m.Description)
 	}
-	// Should pick 720p (highest).
-	if m.VideoURL != "https://example.com/720.mp4" {
-		t.Errorf("videoURL = %q, want 720p URL", m.VideoURL)
+	if m.LocalPath != "/tmp/ox-browser/media/yt_abc123.mp4" {
+		t.Errorf("localPath = %q, want file path", m.LocalPath)
 	}
-	if len(m.Qualities) != 2 {
-		t.Errorf("qualities count = %d, want 2", len(m.Qualities))
+	if m.Duration != 120*time.Second {
+		t.Errorf("duration = %v, want 2m0s", m.Duration)
 	}
-}
-
-func TestBuildMediaAdaptiveOnly(t *testing.T) {
-	pr := &playerResponse{}
-	pr.VideoDetails.Title = "Adaptive"
-	pr.StreamingData.AdaptiveFormats = []playerFormat{
-		{ITag: 137, URL: "https://example.com/video.mp4", MimeType: "video/mp4", Width: 1920, Height: 1080, Bitrate: 4000000},
-		{ITag: 140, URL: "https://example.com/audio.m4a", MimeType: "audio/mp4", Bitrate: 128000},
+	if m.Stats.Views != 1000 {
+		t.Errorf("views = %d, want 1000", m.Stats.Views)
 	}
-
-	m, err := buildMedia("https://youtu.be/test123", pr)
-	if err != nil {
-		t.Fatalf("buildMedia: %v", err)
-	}
-	if m.VideoURL != "https://example.com/video.mp4" {
-		t.Errorf("videoURL = %q, want video adaptive URL", m.VideoURL)
-	}
-	if m.AudioURL != "https://example.com/audio.m4a" {
-		t.Errorf("audioURL = %q, want audio adaptive URL", m.AudioURL)
+	if len(m.Qualities) != 1 || m.Qualities[0].Label != "720p" {
+		t.Errorf("qualities = %v, want [720p]", m.Qualities)
 	}
 }
 
-func TestBuildMediaNoDirectURLs(t *testing.T) {
-	pr := &playerResponse{}
-	pr.VideoDetails.Title = "Cipher Only"
-	pr.StreamingData.Formats = []playerFormat{
-		{ITag: 18, URL: "", MimeType: "video/mp4", Width: 640, Height: 360},
-	}
-	pr.StreamingData.AdaptiveFormats = []playerFormat{
-		{ITag: 137, URL: "", MimeType: "video/mp4", Width: 1920, Height: 1080},
+func TestMapToMediaMinimal(t *testing.T) {
+	dr := &mediaDownloadResponse{
+		MediaType: "video",
+		Files:     []mediaFile{{Path: "/tmp/v.mp4", SizeBytes: 100}},
+		Platform:  "generic",
 	}
 
-	_, err := buildMedia("https://youtu.be/test123", pr)
-	if err == nil {
-		t.Fatal("expected error for no direct URLs")
+	m := mapToMedia("https://example.com/video", dr)
+
+	if m.Platform != "generic" {
+		t.Errorf("platform = %q, want generic", m.Platform)
 	}
-	if !strings.Contains(err.Error(), "no direct URLs available") {
-		t.Errorf("error = %v, want 'no direct URLs available'", err)
+	if m.LocalPath != "/tmp/v.mp4" {
+		t.Errorf("localPath = %q", m.LocalPath)
+	}
+	if m.Duration != 0 {
+		t.Errorf("duration = %v, want 0", m.Duration)
+	}
+	if m.Stats.Views != 0 {
+		t.Errorf("views = %d, want 0", m.Stats.Views)
 	}
 }
