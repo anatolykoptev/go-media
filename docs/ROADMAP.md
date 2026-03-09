@@ -33,12 +33,21 @@ Extract Instagram/Threads code from vaelor into go-media.
 
 Total: 29 tests, 0 lint issues.
 
-## v0.2.0 — YouTube
+## v0.2.0 — YouTube ✅
 
-- [ ] `extract/youtube` — kkdai/youtube integration
-- [ ] Format selection (quality, audio-only)
-- [ ] DASH audio+video merge (ffmpeg mux)
-- [ ] YouTube-specific tests
+Three-tier fallback: kkdai/youtube → go-ytdlp → ox-browser.
+
+- [x] `extract/youtube` — kkdai/youtube v2 (pure Go, fast metadata + direct URLs)
+- [x] go-ytdlp backend (reliable subprocess, handles POT/anti-bot)
+- [x] ox-browser fallback (CF bypass, page fetch + player response parsing)
+- [x] Fallback chain: tier 1 → tier 2 → tier 3 with error aggregation
+- [x] Format selection (best quality within 1080p, DASH adaptive)
+- [x] DASH audio+video merge (ffmpeg mux) in Processor
+- [x] `LocalPath` support (skip download when extractor already downloaded)
+- [x] `AudioURL` support for separate audio streams
+- [x] YouTube-specific tests (9 tests: URL matching, video ID parsing, ox-browser parsing)
+
+Total: 38 tests across 5 packages, 0 lint issues.
 
 ## v0.3.0 — Twitter/X + Reddit
 
