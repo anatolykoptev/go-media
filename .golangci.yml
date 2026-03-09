@@ -1,0 +1,55 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  default: standard
+  enable:
+    - gocritic
+    - gosec
+    - revive
+    - cyclop
+    - gocognit
+    - dupl
+    - goconst
+    - mnd
+    - copyloopvar
+    - modernize
+    - exptostd
+    - bodyclose
+    - noctx
+    - prealloc
+    - unconvert
+    - unparam
+    - usestdlibvars
+  settings:
+    cyclop:
+      max-complexity: 15
+    gocognit:
+      min-complexity: 20
+    funlen:
+      lines: 100
+      statements: 60
+    dupl:
+      threshold: 150
+    goconst:
+      min-occurrences: 3
+    misspell:
+      locale: US
+    revive:
+      rules:
+        - name: unexported-return
+          disabled: true
+  exclusions:
+    presets:
+      - comments
+      - common-false-positives
+    rules:
+      - linters: [gocritic]
+        text: "hugeParam"
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
