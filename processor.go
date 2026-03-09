@@ -8,11 +8,6 @@ import (
 	"path/filepath"
 )
 
-const (
-	tempDirPerm   = 0o750
-	hashMultipler = 31
-)
-
 // Processor orchestrates the full media pipeline: extract → download → transcribe.
 type Processor struct {
 	registry    *Registry
@@ -89,7 +84,7 @@ func (p *Processor) Platforms() []string {
 func sanitizeFilename(url string) string {
 	h := uint32(0)
 	for _, c := range url {
-		h = h*hashMultipler + uint32(c)
+		h = h*hashMultiplier + uint32(c)
 	}
 	return fmt.Sprintf("%08x", h)
 }

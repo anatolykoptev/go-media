@@ -1,21 +1,42 @@
 # go-media Roadmap
 
-## v0.1.0 — Core + Instagram (MVP)
+## v0.1.0 — Core + Instagram (MVP) ✅
 
 Extract Instagram/Threads code from vaelor into go-media.
 
-- [ ] Core types: `Media`, `Quality`, `Transcription`, `Chunk`, `Result`
-- [ ] `Extractor` interface + `Registry`
-- [ ] `Transcriber` interface
-- [ ] `Processor` orchestrator (extract → download → audio → transcribe)
-- [ ] HTTP downloader with timeout + max size
-- [ ] FFmpeg audio extraction + duration probe + chunking
-- [ ] `extract/instagram` — port from vaelor (uses go-threads)
-- [ ] `transcribe/openai` — OpenAI-compatible HTTP backend
-- [ ] `transcribe/gostt` — go-stt wrapper
-- [ ] Tests: unit + mock-based
-- [ ] Update vaelor to import `go-media` instead of internal code
-- [ ] golangci-lint v2 + pre-commit + Makefile
+- [x] Core types: `Media`, `Quality`, `Transcription`, `Chunk`, `Result`
+- [x] `Extractor` interface + `Registry`
+- [x] `Transcriber` interface
+- [x] `Processor` orchestrator (extract → download → audio → transcribe)
+- [x] HTTP downloader with timeout + max size
+- [x] FFmpeg audio extraction + duration probe + chunking
+- [x] `extract/instagram` — port from vaelor (uses go-threads)
+- [x] `transcribe/openai` — OpenAI-compatible HTTP backend
+- [x] `transcribe/gostt` — go-stt wrapper
+- [x] Tests: 25 tests across 6 test files (root, instagram, openai)
+- [x] Update vaelor to import `go-media` instead of internal code
+- [x] golangci-lint v2 + pre-commit + Makefile
+- [x] CI/CD: GitHub Actions (lint + test)
+- [x] Documentation: design doc, architecture, compare, README
+
+### Known Issues (v0.1.0)
+
+- `transcribe/gostt` has no tests (needs go-stt mock or interface)
+- `ChunkAndTranscribe()` silently skips failed chunks — no error count returned
+- `go.sum` needs `go mod tidy` after clean clone (transitive deps from go-stealth)
+- Pre-commit hook requires `GOWORK=off` (parent go.work interference)
+- No `Process()` integration test (only `Extract()` tested in processor)
+- Typo: `hashMultipler` → should be `hashMultiplier`
+
+## v0.1.1 — Quality Fixes
+
+- [ ] Add tests for `transcribe/gostt` package
+- [ ] Add `Process()` integration test with mock transcriber
+- [ ] Return chunk error count from `ChunkAndTranscribe()` (or log callback)
+- [ ] Fix `hashMultipler` typo → `hashMultiplier`
+- [ ] Add input validation to `Options` (ChunkSec > 0, MaxSize >= 0)
+- [ ] Clean up partial file on download context cancellation
+- [ ] Add codecov to CI workflow
 
 ## v0.2.0 — YouTube
 
@@ -47,7 +68,6 @@ Extract Instagram/Threads code from vaelor into go-media.
 
 - [ ] API stability guarantee
 - [ ] Comprehensive documentation
-- [ ] CI/CD with GitHub Actions
 - [ ] GoReleaser
 - [ ] Performance benchmarks
 - [ ] All platform extractors battle-tested

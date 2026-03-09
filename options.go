@@ -11,7 +11,7 @@ type Options struct {
 // defaults fills zero-value fields with sensible defaults.
 func (o *Options) defaults() {
 	if o.ChunkSec <= 0 {
-		o.ChunkSec = 20
+		o.ChunkSec = DefaultChunkSec
 	}
 }
 

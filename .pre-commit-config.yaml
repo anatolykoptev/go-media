@@ -3,3 +3,5 @@ repos:
     rev: v2.10.1
     hooks:
       - id: golangci-lint-full
+        env:
+          GOWORK: "off"

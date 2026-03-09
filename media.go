@@ -27,10 +27,11 @@ type Quality struct {
 
 // Transcription holds the result of speech-to-text processing.
 type Transcription struct {
-	Text     string  // full concatenated text
-	Language string  // detected language code (e.g. "en", "ru")
-	Duration float64 // audio duration in seconds
-	Chunks   []Chunk // per-segment results with timestamps
+	Text         string  // full concatenated text
+	Language     string  // detected language code (e.g. "en", "ru")
+	Duration     float64 // audio duration in seconds
+	Chunks       []Chunk // per-segment results with timestamps
+	FailedChunks int     // number of chunks that failed extraction or transcription
 }
 
 // Chunk represents a single transcribed audio segment.
