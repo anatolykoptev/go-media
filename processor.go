@@ -95,7 +95,7 @@ func (p *Processor) Process(ctx context.Context, url string, opts Options) (*Res
 	// Extract video clips for each transcription chunk (optional)
 	var clips []VideoClip
 	if opts.ExtractClips && transcription != nil && len(transcription.Chunks) > 0 {
-		clips, _ = ExtractVideoClipsFromChunks(ctx, videoPath, tempDir, transcription.Chunks)
+		clips, _ = ExtractVideoClipsFromChunks(ctx, videoPath, tempDir, transcription.Chunks, opts.ClipPaddingSec, transcription.Duration)
 		// Clip extraction failures are non-fatal — clips is partial.
 	}
 

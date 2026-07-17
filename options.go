@@ -2,16 +2,20 @@ package media
 
 // Options configures a single Process call.
 type Options struct {
-	MaxSize      int64  // max video file size in bytes (0 = no limit)
-	ChunkSec     int    // audio chunk duration for transcription (default 20)
-	TempDir      string // directory for temporary files (default os.TempDir())
-	ExtractClips bool   // if true, extract video clips for each transcription chunk
+	MaxSize        int64   // max video file size in bytes (0 = no limit)
+	ChunkSec       int     // audio chunk duration for transcription (default 20)
+	TempDir        string  // directory for temporary files (default os.TempDir())
+	ExtractClips   bool    // if true, extract video clips for each transcription chunk
+	ClipPaddingSec float64 // seconds to extend clips before/after chunk boundaries (default 0.5)
 }
 
 // defaults fills zero-value fields with sensible defaults.
 func (o *Options) defaults() {
 	if o.ChunkSec <= 0 {
 		o.ChunkSec = DefaultChunkSec
+	}
+	if o.ClipPaddingSec < 0 {
+		o.ClipPaddingSec = DefaultClipPaddingSec
 	}
 }
 
