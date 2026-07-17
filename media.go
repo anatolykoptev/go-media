@@ -52,9 +52,20 @@ type Chunk struct {
 	Text  string  // transcribed text for this segment
 }
 
+// VideoClip is a short video segment extracted from the downloaded video,
+// corresponding to a transcription chunk. The caller is responsible for
+// cleaning up the clip files (Path) after use.
+type VideoClip struct {
+	Path  string  // path to the extracted clip file
+	Start float64 // clip start time in seconds
+	End   float64 // clip end time in seconds
+	Text  string  // transcription text for this clip
+}
+
 // Result is the output of a full processing pipeline.
 type Result struct {
 	Media         *Media         // extracted media metadata
 	VideoPath     string         // path to downloaded video file
 	Transcription *Transcription // transcription result (nil if not requested or no speech)
+	VideoClips    []VideoClip    // extracted video clips (nil if ExtractClips option not set)
 }
