@@ -25,13 +25,14 @@ type ytdlpBackend struct {
 
 // ytdlpInfo holds the subset of yt-dlp .info.json fields we need.
 type ytdlpInfo struct {
-	Title       string   `json:"title"`
-	Description string   `json:"description"`
-	Duration    *float64 `json:"duration"`
-	Thumbnail   string   `json:"thumbnail"`
-	Uploader    string   `json:"uploader"`
-	ViewCount   *float64 `json:"view_count"`
-	LikeCount   *float64 `json:"like_count"`
+	Title        string   `json:"title"`
+	Description  string   `json:"description"`
+	Duration     *float64 `json:"duration"`
+	Thumbnail    string   `json:"thumbnail"`
+	Uploader     string   `json:"uploader"`
+	ViewCount    *float64 `json:"view_count"`
+	LikeCount    *float64 `json:"like_count"`
+	CommentCount *float64 `json:"comment_count"`
 }
 
 // download uses yt-dlp to download the video to outputPath.
@@ -58,7 +59,12 @@ func (b *ytdlpBackend) download(
 	}
 
 	infoPath := outputPath + ".info.json"
-	b.populateFromInfoJSON(m, infoPath)
+	if err := b.populateFromInfoJSON(m, infoPath); err != nil {
+		// Download succeeded but metadata extraction failed — return the
+		// media with a warning wrapped in the error so the consumer can
+		// decide whether to use partial metadata or retry.
+		return m, fmt.Errorf("ytdlp: download succeeded but metadata extraction failed: %w", err)
+	}
 
 	return m, nil
 }
@@ -88,18 +94,19 @@ func (b *ytdlpBackend) buildCommand(outputPath string, cfg Config) *ytdlp.Comman
 }
 
 // populateFromInfoJSON reads the .info.json sidecar and fills Media fields.
-// The info file is removed after reading; errors are silently ignored
-// because the download itself already succeeded.
-func (b *ytdlpBackend) populateFromInfoJSON(m *media.Media, path string) {
+// The info file is removed after reading. Returns an error if the file
+// cannot be read or parsed — the download itself already succeeded, so the
+// caller should treat this as a non-fatal metadata warning.
+func (b *ytdlpBackend) populateFromInfoJSON(m *media.Media, path string) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return
+		return fmt.Errorf("read info json: %w", err)
 	}
 	defer os.Remove(path) //nolint:errcheck
 
 	var info ytdlpInfo
 	if err := json.Unmarshal(data, &info); err != nil {
-		return
+		return fmt.Errorf("parse info json: %w", err)
 	}
 
 	m.Title = info.Title
@@ -124,4 +131,9 @@ func (b *ytdlpBackend) populateFromInfoJSON(m *media.Media, path string) {
 	if info.LikeCount != nil {
 		m.Stats.Likes = int64(*info.LikeCount)
 	}
+	if info.CommentCount != nil {
+		m.Stats.Comments = int64(*info.CommentCount)
+	}
+
+	return nil
 }
