@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.3](https://github.com/anatolykoptev/go-media/compare/v0.3.2...v0.3.3) (2026-07-17)
+
+
+### Added
+
+* clip padding + audio fade at cut boundaries ([#20](https://github.com/anatolykoptev/go-media/issues/20)) ([2c4d899](https://github.com/anatolykoptev/go-media/commit/2c4d899ce702213515132b5e81fc563855dde936))
+
 ## [0.3.2](https://github.com/anatolykoptev/go-media/compare/v0.3.1...v0.3.2) (2026-07-17)
 
 
