@@ -5,7 +5,6 @@ type Options struct {
 	MaxSize  int64  // max video file size in bytes (0 = no limit)
 	ChunkSec int    // audio chunk duration for transcription (default 20)
 	TempDir  string // directory for temporary files (default os.TempDir())
-	Parallel bool   // transcribe chunks in parallel
 }
 
 // defaults fills zero-value fields with sensible defaults.

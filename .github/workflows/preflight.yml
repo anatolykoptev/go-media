@@ -1,0 +1,45 @@
+name: preflight
+
+# Pre-merge build/test gate. Runs on GitHub-hosted `ubuntu-24.04-arm` — free
+# unlimited minutes for public repos, and arm64 matches the ARM prod boxes
+# this code deploys to. GitHub-hosted runners sandbox every job in a throwaway
+# VM, so external fork PRs may run CI (first-time contributors still need
+# maintainer approval per GitHub's default).
+#
+# ffmpeg is installed so audio integration tests run (no skip-to-green).
+
+on:
+  pull_request:
+
+concurrency:
+  group: preflight-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-24.04-arm
+    # Suite is ~10s; headroom covers cold Go module cache + govulncheck.
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v5
+        with:
+          # Fleet policy: CI runs the latest patched toolchain (go.mod is the
+          # minimum, not the pin). govulncheck gates on stdlib CVEs that are
+          # fixed in patch releases — pinning go.mod's version fails the gate
+          # the day a stdlib CVE lands.
+          go-version: stable
+
+      - name: Install ffmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+
+      - name: Install govulncheck
+        run: GOWORK=off go install golang.org/x/vuln/cmd/govulncheck@latest
+
+      - name: make preflight
+        run: make preflight

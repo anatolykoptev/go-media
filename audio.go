@@ -10,8 +10,8 @@ import (
 )
 
 // ProbeDuration returns video/audio duration in seconds using ffprobe.
-// Returns 0 if ffprobe fails or file has no duration.
-func ProbeDuration(ctx context.Context, path string) int {
+// Returns an error if ffprobe is not installed, fails, or the file has no duration.
+func ProbeDuration(ctx context.Context, path string) (int, error) {
 	probeCtx, cancel := context.WithTimeout(ctx, DefaultProbeTimeout)
 	defer cancel()
 
@@ -22,14 +22,14 @@ func ProbeDuration(ctx context.Context, path string) int {
 		path,
 	).Output()
 	if err != nil {
-		return 0
+		return 0, fmt.Errorf("ffprobe: %w", err)
 	}
 
 	var dur float64
 	if _, err := fmt.Sscanf(strings.TrimSpace(string(out)), "%f", &dur); err != nil {
-		return 0
+		return 0, fmt.Errorf("parse duration: %w", err)
 	}
-	return int(dur) + 1 // round up
+	return int(dur) + 1, nil // round up
 }
 
 // ExtractAudioChunk extracts a WAV audio chunk from a video file using ffmpeg.
@@ -81,16 +81,25 @@ func MergeAudioVideo(ctx context.Context, videoPath, audioPath, outputPath strin
 }
 
 // ChunkAndTranscribe splits audio into chunks and transcribes each one.
-// Returns nil if transcriber is nil or unavailable.
-func ChunkAndTranscribe(ctx context.Context, videoPath, tempDir string, t Transcriber, opts Options) *Transcription {
-	if t == nil || !t.Available() {
-		return nil
+// Returns (nil, nil) if transcriber is nil (opt-out).
+// Returns (nil, error) if the transcriber is unavailable or ffprobe fails.
+// Returns (partial, error) if some chunks failed — the partial result contains
+// the successfully transcribed text and FailedChunks is set.
+func ChunkAndTranscribe(ctx context.Context, videoPath, tempDir string, t Transcriber, opts Options) (*Transcription, error) {
+	if t == nil {
+		return nil, nil
+	}
+	if !t.Available() {
+		return nil, fmt.Errorf("transcriber unavailable")
 	}
 
 	opts.defaults()
-	duration := ProbeDuration(ctx, videoPath)
+	duration, err := ProbeDuration(ctx, videoPath)
+	if err != nil {
+		return nil, fmt.Errorf("probe duration: %w", err)
+	}
 	if duration <= 0 {
-		return nil
+		return nil, fmt.Errorf("probe duration: no duration in file")
 	}
 
 	base := filepath.Base(videoPath)
@@ -110,15 +119,19 @@ func ChunkAndTranscribe(ctx context.Context, videoPath, tempDir string, t Transc
 			continue
 		}
 
-		result, err := t.Transcribe(ctx, chunkPath)
-		cleanupFile(chunkPath)
-
-		if err != nil {
+		result, trErr := t.Transcribe(ctx, chunkPath)
+		if trErr != nil {
+			cleanupFile(chunkPath)
 			failedChunks++
 			continue
 		}
 
-		text := strings.TrimSpace(result.Text)
+		text := ""
+		if result != nil {
+			text = strings.TrimSpace(result.Text)
+		}
+		cleanupFile(chunkPath)
+
 		if text == "" {
 			continue
 		}
@@ -132,15 +145,21 @@ func ChunkAndTranscribe(ctx context.Context, videoPath, tempDir string, t Transc
 	}
 
 	if len(texts) == 0 {
-		return nil
+		return nil, fmt.Errorf("transcription failed: all %d chunks failed", failedChunks)
 	}
 
-	return &Transcription{
+	tr := &Transcription{
 		Text:         strings.Join(texts, " "),
 		Duration:     float64(duration),
 		Chunks:       chunks,
 		FailedChunks: failedChunks,
 	}
+
+	if failedChunks > 0 {
+		return tr, fmt.Errorf("transcription partial: %d/%d chunks failed", failedChunks, len(chunks)+failedChunks)
+	}
+
+	return tr, nil
 }
 
 func cleanupFile(path string) {

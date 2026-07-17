@@ -106,7 +106,7 @@ func setDASHStreams(
 
 	// Best audio-only stream.
 	audioOnly := video.Formats.Select(func(f youtube.Format) bool {
-		return f.AudioChannels > 0 && strings.Contains(f.MimeType, "audio/")
+		return f.AudioChannels > 0 && strings.HasPrefix(f.MimeType, "audio/")
 	})
 
 	af, ok := pickBestAudio(audioOnly)
