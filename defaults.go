@@ -16,6 +16,14 @@ const (
 	// DefaultChunkSec is the default audio chunk duration in seconds for transcription.
 	DefaultChunkSec = 20
 
+	// DefaultClipPaddingSec is the default padding applied to video clips
+	// before and after transcription chunk boundaries, to avoid cutting mid-word.
+	DefaultClipPaddingSec = 0.5
+
+	// DefaultFadeDurationSec is the audio fade duration at clip boundaries
+	// to prevent clicks/pops from non-zero-crossing cuts.
+	DefaultFadeDurationSec = 0.03
+
 	// tempDirPerm is the permission mode for temp directories.
 	tempDirPerm = 0o750
 
