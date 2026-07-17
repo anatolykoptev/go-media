@@ -31,7 +31,10 @@ func (unavailableTranscriber) Transcribe(_ context.Context, _ string) (*media.Tr
 func (unavailableTranscriber) Available() bool { return false }
 
 func TestProbeDurationNoFile(t *testing.T) {
-	dur := media.ProbeDuration(context.Background(), "/tmp/nonexistent_video_file_12345.mp4")
+	dur, err := media.ProbeDuration(context.Background(), "/tmp/nonexistent_video_file_12345.mp4")
+	if err == nil {
+		t.Error("expected error for nonexistent file, got nil")
+	}
 	if dur != 0 {
 		t.Errorf("expected 0 for nonexistent file, got %d", dur)
 	}
@@ -49,7 +52,10 @@ func TestExtractAudioChunkNoFFmpeg(t *testing.T) {
 }
 
 func TestChunkAndTranscribeNilTranscriber(t *testing.T) {
-	result := media.ChunkAndTranscribe(context.Background(), "video.mp4", t.TempDir(), nil, media.Options{})
+	result, err := media.ChunkAndTranscribe(context.Background(), "video.mp4", t.TempDir(), nil, media.Options{})
+	if err != nil {
+		t.Errorf("expected nil error for nil transcriber (opt-out), got: %v", err)
+	}
 	if result != nil {
 		t.Error("expected nil result for nil transcriber")
 	}
@@ -57,7 +63,10 @@ func TestChunkAndTranscribeNilTranscriber(t *testing.T) {
 
 func TestChunkAndTranscribeUnavailable(t *testing.T) {
 	tr := unavailableTranscriber{}
-	result := media.ChunkAndTranscribe(context.Background(), "video.mp4", t.TempDir(), tr, media.Options{})
+	result, err := media.ChunkAndTranscribe(context.Background(), "video.mp4", t.TempDir(), tr, media.Options{})
+	if err == nil {
+		t.Error("expected error for unavailable transcriber")
+	}
 	if result != nil {
 		t.Error("expected nil result for unavailable transcriber")
 	}
@@ -85,7 +94,10 @@ func TestExtractAudioChunkIntegration(t *testing.T) {
 	}
 
 	// Probe duration — expect 3 or 4 (rounds up).
-	dur := media.ProbeDuration(ctx, videoPath)
+	dur, err := media.ProbeDuration(ctx, videoPath)
+	if err != nil {
+		t.Fatalf("ProbeDuration failed: %v", err)
+	}
 	if dur < 3 || dur > 4 {
 		t.Errorf("expected duration 3-4, got %d", dur)
 	}

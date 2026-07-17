@@ -23,7 +23,6 @@ type mediaDownloadRequest struct {
 	URL       string `json:"url"`
 	MediaType string `json:"media_type"`
 	MaxHeight int    `json:"max_height,omitempty"`
-	MaxSizeMB int    `json:"max_size_mb,omitempty"`
 }
 
 // mediaDownloadResponse is the ox-browser /media/download API response.

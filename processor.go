@@ -33,6 +33,8 @@ func (p *Processor) Extract(ctx context.Context, url string) (*Media, error) {
 }
 
 // Process runs the full pipeline: extract metadata → download video → transcribe audio.
+// The caller is responsible for cleaning up the temp directory and downloaded files
+// after Process returns. If opts.TempDir is empty, files are placed in os.TempDir()/go-media.
 func (p *Processor) Process(ctx context.Context, url string, opts Options) (*Result, error) {
 	opts.defaults()
 
@@ -79,7 +81,15 @@ func (p *Processor) Process(ctx context.Context, url string, opts Options) (*Res
 	// Transcribe (optional)
 	var transcription *Transcription
 	if p.transcriber != nil {
-		transcription = ChunkAndTranscribe(ctx, videoPath, tempDir, p.transcriber, opts)
+		transcription, err = ChunkAndTranscribe(ctx, videoPath, tempDir, p.transcriber, opts)
+		if err != nil {
+			// Return partial result with error — consumer can check both.
+			return &Result{
+				Media:         m,
+				VideoPath:     videoPath,
+				Transcription: transcription,
+			}, fmt.Errorf("transcribe: %w", err)
+		}
 	}
 
 	return &Result{
@@ -108,9 +118,9 @@ func (p *Processor) mergeDASH(ctx context.Context, videoPath, audioURL string, m
 	}
 
 	// Replace original video-only file with merged
-	_ = os.Remove(videoPath)
+	_ = os.Remove(videoPath) //nolint:errcheck // best-effort cleanup
 	if err := os.Rename(mergedPath, videoPath); err != nil {
-		return mergedPath, nil //nolint:nilerr // merged file exists at mergedPath
+		return mergedPath, fmt.Errorf("rename merged file: %w", err)
 	}
 	return videoPath, nil
 }

@@ -37,8 +37,8 @@ var videoIDPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{11}$`)
 type Config struct {
 	YtdlpPath    string // path to yt-dlp binary (empty = skip tier 2)
 	OxBrowserURL string // ox-browser base URL (empty = skip tier 3)
-	CookiesFile  string // path to cookies.txt for age-restricted content
-	Proxy        string // HTTP proxy URL for downloads
+	CookiesFile  string // path to cookies.txt for age-restricted content (ytdlp backend only)
+	Proxy        string // HTTP proxy URL for downloads (ytdlp backend only; kkdai and ox-browser do not support proxy)
 	TempDir      string // temp directory for yt-dlp downloads
 }
 
@@ -95,12 +95,16 @@ func (e *Extractor) Extract(ctx context.Context, rawURL string) (*media.Media, e
 
 	// Tier 2: go-ytdlp — reliable subprocess download.
 	if e.ydlp != nil {
-		outputPath := e.ytdlpOutputPath(videoID)
-		m, ytErr := e.ydlp.download(ctx, rawURL, outputPath, e.cfg)
-		if ytErr == nil {
-			return m, nil
+		outputPath, dirErr := e.ytdlpOutputPath(videoID)
+		if dirErr != nil {
+			err = fmt.Errorf("%w; ytdlp: %w", err, dirErr)
+		} else {
+			m, ytErr := e.ydlp.download(ctx, rawURL, outputPath, e.cfg)
+			if ytErr == nil {
+				return m, nil
+			}
+			err = fmt.Errorf("%w; ytdlp: %w", err, ytErr)
 		}
-		err = fmt.Errorf("%w; ytdlp: %w", err, ytErr)
 	}
 
 	// Tier 3: ox-browser — page fetch + player response parsing.
@@ -116,13 +120,15 @@ func (e *Extractor) Extract(ctx context.Context, rawURL string) (*media.Media, e
 }
 
 // ytdlpOutputPath returns the output path for yt-dlp downloads.
-func (e *Extractor) ytdlpOutputPath(videoID string) string {
+func (e *Extractor) ytdlpOutputPath(videoID string) (string, error) {
 	dir := e.cfg.TempDir
 	if dir == "" {
 		dir = filepath.Join(os.TempDir(), "go-media")
 	}
-	_ = os.MkdirAll(dir, 0o750) //nolint:mnd
-	return filepath.Join(dir, "youtube_"+videoID+".mp4")
+	if err := os.MkdirAll(dir, 0o750); err != nil { //nolint:mnd
+		return "", fmt.Errorf("create temp dir: %w", err)
+	}
+	return filepath.Join(dir, "youtube_"+videoID+".mp4"), nil
 }
 
 // parseVideoID extracts the video ID from any supported YouTube URL format.

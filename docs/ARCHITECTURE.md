@@ -128,7 +128,7 @@ Sequential by default. Parallel option available.
 - `Processor` is safe for concurrent use (stateless per call)
 - `Extractor` implementations must be safe for concurrent use
 - `Transcriber` implementations must be safe for concurrent use
-- Chunk transcription: sequential by default, `Options.Parallel` for concurrent
+- Chunk transcription: sequential (parallel transcription planned for future release)
 
 ## Testing Strategy
 

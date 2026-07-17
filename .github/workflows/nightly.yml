@@ -1,0 +1,41 @@
+name: nightly
+
+# Full test suite with -race — the same suite as preflight (no -short split
+# needed: the test suite is small, ~10s). Runs nightly to catch flakiness and
+# regressions that a single preflight run might miss.
+#
+# Runs on GitHub-hosted `ubuntu-24.04-arm` (free for public repos, arm64
+# parity with prod).
+
+on:
+  schedule:
+    - cron: "0 11 * * *"   # 11:00 UTC ≈ 03:00-04:00 America/Los_Angeles (off-peak)
+  workflow_dispatch: {}    # manual trigger
+
+concurrency:
+  group: nightly-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  full-test:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Install ffmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+
+      - name: make test (full suite with -race)
+        run: make test
+
+      - name: make lint
+        run: make lint
