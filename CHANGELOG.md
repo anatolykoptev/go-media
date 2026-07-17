@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/anatolykoptev/go-media/compare/v0.3.1...v0.3.2) (2026-07-17)
+
+
+### Added
+
+* add video clip extraction from transcription chunks ([#15](https://github.com/anatolykoptev/go-media/issues/15)) ([e63c4d1](https://github.com/anatolykoptev/go-media/commit/e63c4d11e7c27c57be4139b040b30ba9341f6de3))
+
 ## [0.3.1](https://github.com/anatolykoptev/go-media/compare/v0.3.0...v0.3.1) (2026-07-17)
 
 
