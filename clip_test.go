@@ -54,7 +54,7 @@ func TestExtractVideoClipIntegration(t *testing.T) {
 		t.Fatalf("failed to generate test video: %v\n%s", err, out)
 	}
 
-	// Extract a 2-second clip from 1.0 to 3.0.
+	// Extract a 2-second clip from 1.0 to 3.0 (with audio fade).
 	clipPath := filepath.Join(tmpDir, "clip.mp4")
 	if err := media.ExtractVideoClip(ctx, videoPath, clipPath, 1.0, 3.0); err != nil {
 		t.Fatalf("ExtractVideoClip failed: %v", err)
@@ -105,7 +105,8 @@ func TestExtractVideoClipsFromChunksSkipsEmptyText(t *testing.T) {
 		{Start: 2, End: 3, Text: "world"},
 	}
 
-	clips, failed := media.ExtractVideoClipsFromChunks(ctx, videoPath, tmpDir, chunks)
+	// No padding, totalDuration=4.
+	clips, failed := media.ExtractVideoClipsFromChunks(ctx, videoPath, tmpDir, chunks, 0, 4)
 	if failed != 0 {
 		t.Errorf("expected 0 failed clips, got %d", failed)
 	}
