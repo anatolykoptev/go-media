@@ -1,7 +1,7 @@
 # go-media
 
 **Module**: `github.com/anatolykoptev/go-media`
-**Repo**: `/home/krolik/src/go-media/`
+**Repo**: `/home/user/src/go-media/`
 
 ## Architecture
 
