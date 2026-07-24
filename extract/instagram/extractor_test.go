@@ -2,6 +2,10 @@ package instagram
 
 import (
 	"testing"
+
+	threads "github.com/anatolykoptev/go-threads"
+
+	"github.com/anatolykoptev/go-media"
 )
 
 func TestMatch(t *testing.T) {
@@ -79,4 +83,42 @@ func TestParseURL(t *testing.T) {
 			t.Errorf("parseURL(%q): threadsCode = %q, want %q", tt.url, tc, tt.threadsCode)
 		}
 	}
+}
+
+func TestMapStats(t *testing.T) {
+	t.Run("all metrics", func(t *testing.T) {
+		post := threads.Post{
+			ViewCount:    56964765,
+			LikeCount:    2244564,
+			CommentCount: 24885,
+			RepostCount:  27745,
+			ReplyCount:   999, // ignored when CommentCount set
+		}
+		got := mapStats(post)
+		want := media.MediaStats{
+			Views:    56964765,
+			Likes:    2244564,
+			Comments: 24885,
+			Shares:   27745,
+		}
+		if got != want {
+			t.Fatalf("mapStats = %+v, want %+v", got, want)
+		}
+	})
+
+	t.Run("comment fallback to reply count", func(t *testing.T) {
+		// Threads posts expose direct_reply_count but no IG comment_count.
+		post := threads.Post{
+			LikeCount:    100,
+			ReplyCount:   5,
+			CommentCount: 0,
+		}
+		got := mapStats(post)
+		if got.Comments != 5 {
+			t.Fatalf("Comments = %d, want 5 (fallback from ReplyCount)", got.Comments)
+		}
+		if got.Likes != 100 {
+			t.Errorf("Likes = %d, want 100", got.Likes)
+		}
+	})
 }
