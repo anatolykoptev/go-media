@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.3.4](https://github.com/anatolykoptev/go-media/compare/v0.3.3...v0.3.4) (2026-07-24)
+
+
+### Added
+
+* **stats:** map view/comment/share engagement counts (Instagram + YouTube) ([fabf77f](https://github.com/anatolykoptev/go-media/commit/fabf77f30512178f5c334002eedf0f2137eeebef))
+
+
+### Changed
+
+* remove duplicate transcribe/openai — use transcribe/gostt ([#25](https://github.com/anatolykoptev/go-media/issues/25)) ([6b6bc40](https://github.com/anatolykoptev/go-media/commit/6b6bc40e0920e36a46c5228fb2f57a8779797c3b))
+
+
+### Dependencies
+
+* bump go-stt to v0.3.0 ([#23](https://github.com/anatolykoptev/go-media/issues/23)) ([3b74382](https://github.com/anatolykoptev/go-media/commit/3b743823af07d9eefb85603bff21d5925266641d))
+
 ## [0.3.3](https://github.com/anatolykoptev/go-media/compare/v0.3.2...v0.3.3) (2026-07-17)
 
 
