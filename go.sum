@@ -2,12 +2,12 @@ github.com/Masterminds/semver/v3 v3.2.1 h1:RN9w6+7QoMeJVGyfmbcgs28Br8cvmnucEXnY0
 github.com/Masterminds/semver/v3 v3.2.1/go.mod h1:qvl/7zhW3nngYb5+80sSMF+FG2BjYrf8m9wsX0PNOMQ=
 github.com/ProtonMail/go-crypto v1.3.0 h1:ILq8+Sf5If5DCpHQp4PbZdS1J7HDFRXz/+xKBiRGFrw=
 github.com/ProtonMail/go-crypto v1.3.0/go.mod h1:9whxjD8Rbs29b4XWbB8irEcE8KHMqaR2e7GWU1R+/PE=
-github.com/anatolykoptev/go-stealth v1.12.0 h1:bxvL0ctPxMbDFQgS2gpjZNbnEN+gH5cTSNTg8Lwyj8g=
-github.com/anatolykoptev/go-stealth v1.12.0/go.mod h1:4A6l+zJ0OEi9aPehdg4/4CospLDqFtW3bCgXdV4kwYE=
+github.com/anatolykoptev/go-stealth v1.19.1 h1:7w25zGDUMy0kz4cP2p/J9zjCgfUA6U1akBTDMh/M7G4=
+github.com/anatolykoptev/go-stealth v1.19.1/go.mod h1:1Fevj8WfJDJ9h/t4Bl8MtHbuQ92ZPjIm8SR6/vnwJsQ=
 github.com/anatolykoptev/go-stt v0.3.0 h1:Mo+tg4Z7wNlVUwZ1Tlrga8MXGIgy4Trx9CE+orzSO7o=
 github.com/anatolykoptev/go-stt v0.3.0/go.mod h1:ZBaKmLsDVOogdZwOzSq5np7gBzS9IsbaTzn1iMvDxp0=
-github.com/anatolykoptev/go-threads v0.2.0 h1:AvgB9yUowwDQ18fUE1EpMxYmMIcAJn1K25tJ0rE2Cv8=
-github.com/anatolykoptev/go-threads v0.2.0/go.mod h1:tdITcsdWPBhbM/5oPb10oAbRGxVoJiU4OqtFbEFZYD0=
+github.com/anatolykoptev/go-threads v0.4.0 h1:O8HPaf56O4RXZkWW8EnhEDHlub1vV7WiwNrZ1/6Zq4w=
+github.com/anatolykoptev/go-threads v0.4.0/go.mod h1:EZTWWGCMfAbzzLv6RABYuanQSpqYAvPOAb4IVcyrir8=
 github.com/andybalholm/brotli v1.2.0 h1:ukwgCxwYrmACq68yiUqwIWnGY0cTPox/M94sVwToPjQ=
 github.com/andybalholm/brotli v1.2.0/go.mod h1:rzTDkvFWvIrjDXZHkuS16NPggd91W3kUSvPlQ1pLaKY=
 github.com/bdandy/go-errors v1.2.2 h1:WdFv/oukjTJCLa79UfkGmwX7ZxONAihKu4V0mLIs11Q=

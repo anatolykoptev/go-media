@@ -4,14 +4,14 @@ go 1.26.0
 
 require (
 	github.com/anatolykoptev/go-stt v0.3.0
-	github.com/anatolykoptev/go-threads v0.2.0
+	github.com/anatolykoptev/go-threads v0.4.0
 	github.com/kkdai/youtube/v2 v2.10.5
 	github.com/lrstanley/go-ytdlp v1.3.3
 )
 
 require (
 	github.com/ProtonMail/go-crypto v1.3.0 // indirect
-	github.com/anatolykoptev/go-stealth v1.12.0 // indirect
+	github.com/anatolykoptev/go-stealth v1.19.1 // indirect
 	github.com/andybalholm/brotli v1.2.0 // indirect
 	github.com/bdandy/go-errors v1.2.2 // indirect
 	github.com/bdandy/go-socks4 v1.2.3 // indirect

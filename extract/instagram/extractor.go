@@ -74,10 +74,7 @@ func (e *Extractor) Extract(ctx context.Context, rawURL string) (*media.Media, e
 	}
 
 	// Engagement stats
-	m.Stats = media.MediaStats{
-		Likes:    int64(post.LikeCount),
-		Comments: int64(post.ReplyCount),
-	}
+	m.Stats = mapStats(post)
 
 	code := igCode
 	if code == "" {
@@ -114,4 +111,21 @@ func parseURL(rawURL string) (igCode, threadsUser, threadsCode string, err error
 	}
 
 	return "", "", "", errors.New("could not extract post code from URL")
+}
+
+// mapStats converts a go-threads Post's engagement counts into media.MediaStats.
+// CommentCount (IG feed comments) is preferred; for Threads posts that only
+// expose direct_reply_count, ReplyCount is used as a fallback when CommentCount
+// is zero.
+func mapStats(post threads.Post) media.MediaStats {
+	comments := post.CommentCount
+	if comments == 0 {
+		comments = post.ReplyCount
+	}
+	return media.MediaStats{
+		Views:    int64(post.ViewCount),
+		Likes:    int64(post.LikeCount),
+		Comments: int64(comments),
+		Shares:   int64(post.RepostCount),
+	}
 }

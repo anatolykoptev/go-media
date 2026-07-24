@@ -25,6 +25,7 @@ type MediaStats struct {
 	Views    int64 // view/play count
 	Likes    int64 // like/heart count
 	Comments int64 // comment/reply count
+	Shares   int64 // share/repost count
 }
 
 // Quality represents a single video quality variant.

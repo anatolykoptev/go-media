@@ -33,6 +33,7 @@ type ytdlpInfo struct {
 	ViewCount    *float64 `json:"view_count"`
 	LikeCount    *float64 `json:"like_count"`
 	CommentCount *float64 `json:"comment_count"`
+	RepostCount  *float64 `json:"repost_count"`
 }
 
 // download uses yt-dlp to download the video to outputPath.
@@ -133,6 +134,9 @@ func (b *ytdlpBackend) populateFromInfoJSON(m *media.Media, path string) error {
 	}
 	if info.CommentCount != nil {
 		m.Stats.Comments = int64(*info.CommentCount)
+	}
+	if info.RepostCount != nil {
+		m.Stats.Shares = int64(*info.RepostCount)
 	}
 
 	return nil
