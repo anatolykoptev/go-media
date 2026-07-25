@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/anatolykoptev/go-stt v0.3.0
-	github.com/anatolykoptev/go-threads v0.7.0
+	github.com/anatolykoptev/go-threads v0.8.0
 	github.com/kkdai/youtube/v2 v2.10.5
 	github.com/lrstanley/go-ytdlp v1.3.3
 )
