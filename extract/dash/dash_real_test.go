@@ -78,33 +78,65 @@ func TestParseManifestInstagramReal(t *testing.T) {
 	}
 }
 
-func TestSelectInstagram50MBPicks1080p(t *testing.T) {
+func TestSelectInstagramVP9OnlyNoUsableVideo(t *testing.T) {
+	// The captured instagramMPD is VP9-only (all 9 video reps are
+	// codecs="vp09..."). Telegram's mobile clients cannot decode a VP9 video
+	// track, so the selector must signal "no usable video" — a zero
+	// Representation with an empty URL — instead of returning the 1080p VP9
+	// rep. The caller (extract/instagram.populateMedia) then degrades to the
+	// H.264 video_versions rendition. This is the measured production bug.
 	man, err := ParseManifest(instagramMPD)
 	if err != nil {
 		t.Fatalf("ParseManifest: %v", err)
 	}
-	// 50 MB budget. The 1080p rep is 13661765 bytes (~13 MB, FBContentLength),
-	// well inside the budget. The old code never reached it because parsing
-	// returned 0 reps; Select errored and the extractor degraded to 720p.
 	video, audio, err := Select(man, 50*1024*1024)
 	if err != nil {
-		t.Fatalf("Select: unexpected error: %v", err)
+		t.Fatalf("Select: unexpected error: %v (VP9-only must signal no usable video via zero rep, not error)", err)
 	}
-	if video.Height != 1920 || video.Width != 1080 {
-		t.Fatalf("picked %dx%d, want 1080x1920", video.Width, video.Height)
+	if video != (Representation{}) {
+		t.Fatalf("VP9-only manifest: Select returned video=%+v, want zero Representation (no H.264 → signal degrade to video_versions)", video)
 	}
-	if video.URL == "" {
-		t.Fatal("chosen video URL is empty")
-	}
+	// Audio is unaffected — it is selected normally (HE-AAC plays fine).
 	if audio.URL == "" {
-		t.Fatal("chosen audio URL is empty")
+		t.Fatal("audio URL empty: audio selection must be unchanged by the H.264 video filter")
 	}
 }
+
+// instagramH264MPD is an Instagram-shape manifest (contentType on
+// AdaptationSet, mimeType on Representation, FBContentLength on every rep)
+// whose video representations are H.264 (avc1.*) — the per-upload variant
+// that some Instagram manifests carry. The captured instagramMPD is VP9-only;
+// this fixture exists so the budget / FBContentLength-preference logic stays
+// covered now that the selector rejects VP9 reps. Bandwidths and
+// FBContentLength values mirror the real 720p/960p/1080p rungs so the
+// estimate-vs-exact gap (1080p: estimate 13661760, exact 13661765) is
+// preserved.
+const instagramH264MPD = `<?xml version="1.0" encoding="UTF-8"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" mediaPresentationDuration="PT47.5S" type="static">
+  <Period>
+    <AdaptationSet contentType="video">
+      <Representation id="720pv" bandwidth="711248" codecs="avc1.4d401f" mimeType="video/mp4" sar="1:1" FBContentLength="7112498" width="720" height="1280" frameRate="15360/512">
+        <BaseURL>https://cdn.example.invalid/h264-720.mp4</BaseURL>
+      </Representation>
+      <Representation id="960pv" bandwidth="976834" codecs="avc1.4d401f" mimeType="video/mp4" sar="1:1" FBContentLength="9768348" width="1080" height="1920" frameRate="15360/256">
+        <BaseURL>https://cdn.example.invalid/h264-960.mp4</BaseURL>
+      </Representation>
+      <Representation id="1080pv" bandwidth="2300928" codecs="avc1.640028" mimeType="video/mp4" sar="1:1" FBContentLength="13661765" width="1080" height="1920" frameRate="15360/256">
+        <BaseURL>https://cdn.example.invalid/h264-1080.mp4</BaseURL>
+      </Representation>
+    </AdaptationSet>
+    <AdaptationSet contentType="audio">
+      <Representation id="audio" bandwidth="64000" codecs="mp4a.40.5" mimeType="audio/mp4" FBContentLength="359339">
+        <BaseURL>https://cdn.example.invalid/audio.m4a</BaseURL>
+      </Representation>
+    </AdaptationSet>
+  </Period>
+</MPD>`
 
 func TestSelectInstagramMiddleRungBudget(t *testing.T) {
 	// A budget that admits the 720p rung (FBContentLength=7112498) but NOT the
 	// 960p rung (FBContentLength=9768348) must pick 720p, never anything larger.
-	man, err := ParseManifest(instagramMPD)
+	man, err := ParseManifest(instagramH264MPD)
 	if err != nil {
 		t.Fatalf("ParseManifest: %v", err)
 	}
@@ -125,7 +157,7 @@ func TestSelectInstagramFBContentLengthPreferredOverEstimate(t *testing.T) {
 	// estimate = 2300928 * 47.5 / 8 = 13661755 (off by 10 bytes). A budget
 	// between the two must still pick 1080p when using the exact size, and
 	// must NOT pick 1080p if only the estimate were used.
-	man, err := ParseManifest(instagramMPD)
+	man, err := ParseManifest(instagramH264MPD)
 	if err != nil {
 		t.Fatalf("ParseManifest: %v", err)
 	}

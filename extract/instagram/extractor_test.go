@@ -291,3 +291,55 @@ func TestPopulateMediaManifestNoBaseURLFallsBack(t *testing.T) {
 		t.Fatalf("AudioURL = %q, want empty on fallback", m.AudioURL)
 	}
 }
+
+// vp9OnlyManifestFixture mirrors the measured production case (reel
+// DO8cvGViIPu, 2026-07-25): the DASH manifest carries ONLY VP9 video
+// representations (codecs="vp09...") at up to 1080x1920, while the
+// video_versions array on the same post is H.264 capped at 720x1280. The
+// muxed VP9 MP4 is technically valid but Telegram's mobile clients render a
+// blank picture with working audio. populateMedia must fall through to the
+// H.264 video_versions rendition — VideoURL = the H.264 720p URL, AudioURL
+// empty (no mux) — exactly as the no-BaseURL and unparseable-manifest paths do.
+const vp9OnlyManifestFixture = `<?xml version="1.0" encoding="UTF-8"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" mediaPresentationDuration="PT47.5S" type="static">
+  <Period>
+    <AdaptationSet contentType="video">
+      <Representation id="1447419429847706v" bandwidth="2300928" codecs="vp09.00.40.08.00.01.01.01.00" mimeType="video/mp4" sar="1:1" FBContentLength="13661765" width="1080" height="1920" frameRate="15360/256">
+        <BaseURL>https://cdn.example.invalid/vp9-1080p.mp4</BaseURL>
+      </Representation>
+      <Representation id="240pv" bandwidth="166515" codecs="vp09.00.31.08.00.01.01.01.00" mimeType="video/mp4" FBContentLength="988686" width="720" height="1280">
+        <BaseURL>https://cdn.example.invalid/vp9-240p.mp4</BaseURL>
+      </Representation>
+    </AdaptationSet>
+    <AdaptationSet contentType="audio">
+      <Representation id="audio" bandwidth="64000" codecs="mp4a.40.5" mimeType="audio/mp4" FBContentLength="359339">
+        <BaseURL>https://cdn.example.invalid/audio.m4a</BaseURL>
+      </Representation>
+    </AdaptationSet>
+  </Period>
+</MPD>`
+
+func TestPopulateMediaVP9OnlyManifestFallsBackToVideoVersions(t *testing.T) {
+	m := &media.Media{Metadata: make(map[string]string)}
+	post := threads.Post{
+		Videos: []threads.MediaVersion{
+			{URL: fallbackVideoURL, Width: 720, Height: 1280},
+			{URL: "https://cdn.instagram.com/480.mp4", Width: 480, Height: 854},
+		},
+		VideoDashManifest: vp9OnlyManifestFixture,
+	}
+
+	populateMedia(m, post, 50_000_000)
+
+	// No H.264 video rep in the manifest → must fall through to video_versions.
+	if m.VideoURL != fallbackVideoURL {
+		t.Fatalf("VideoURL = %q, want video_versions H.264 fallback (manifest is VP9-only)", m.VideoURL)
+	}
+	if m.AudioURL != "" {
+		t.Fatalf("AudioURL = %q, want empty (no DASH mux on VP9-only fall-through)", m.AudioURL)
+	}
+	// Qualities come from video_versions, not the VP9 manifest reps.
+	if len(m.Qualities) != 2 {
+		t.Fatalf("Qualities: got %d, want 2 (video_versions), not VP9 manifest reps", len(m.Qualities))
+	}
+}
