@@ -8,6 +8,9 @@ import (
 	"github.com/anatolykoptev/go-media"
 )
 
+// fallbackVideoURL is the video_versions URL used across the fallback tests.
+const fallbackVideoURL = "https://cdn.instagram.com/720.mp4"
+
 // dashManifestFixture mirrors the structure tested in extract/dash: four video
 // representations 240p→1080p, one audio, 30s duration, absolute BaseURLs.
 const dashManifestFixture = `<?xml version="1.0" encoding="UTF-8"?>
@@ -154,7 +157,7 @@ func TestPopulateMediaWithManifest(t *testing.T) {
 	m := &media.Media{Metadata: make(map[string]string)}
 	post := threads.Post{
 		Videos: []threads.MediaVersion{
-			{URL: "https://cdn.instagram.com/720.mp4", Width: 720, Height: 1280},
+			{URL: fallbackVideoURL, Width: 720, Height: 1280},
 		},
 		VideoDashManifest: dashManifestFixture,
 	}
@@ -194,7 +197,7 @@ func TestPopulateMediaManifestBudgetPicksLower(t *testing.T) {
 	m := &media.Media{Metadata: make(map[string]string)}
 	post := threads.Post{
 		Videos: []threads.MediaVersion{
-			{URL: "https://cdn.instagram.com/720.mp4", Width: 720, Height: 1280},
+			{URL: fallbackVideoURL, Width: 720, Height: 1280},
 		},
 		VideoDashManifest: dashManifestFixture,
 	}
@@ -214,7 +217,7 @@ func TestPopulateMediaNoManifestFallsBackToVideoVersions(t *testing.T) {
 	m := &media.Media{Metadata: make(map[string]string)}
 	post := threads.Post{
 		Videos: []threads.MediaVersion{
-			{URL: "https://cdn.instagram.com/720.mp4", Width: 720, Height: 1280},
+			{URL: fallbackVideoURL, Width: 720, Height: 1280},
 			{URL: "https://cdn.instagram.com/480.mp4", Width: 480, Height: 854},
 		},
 		VideoDashManifest: "", // no manifest — fallback rung
@@ -222,7 +225,7 @@ func TestPopulateMediaNoManifestFallsBackToVideoVersions(t *testing.T) {
 
 	populateMedia(m, post, 50_000_000)
 
-	if m.VideoURL != "https://cdn.instagram.com/720.mp4" {
+	if m.VideoURL != fallbackVideoURL {
 		t.Fatalf("VideoURL = %q, want first video_versions entry", m.VideoURL)
 	}
 	if m.AudioURL != "" {
@@ -239,14 +242,50 @@ func TestPopulateMediaUnparseableManifestFallsBack(t *testing.T) {
 	m := &media.Media{Metadata: make(map[string]string)}
 	post := threads.Post{
 		Videos: []threads.MediaVersion{
-			{URL: "https://cdn.instagram.com/720.mp4", Width: 720, Height: 1280},
+			{URL: fallbackVideoURL, Width: 720, Height: 1280},
 		},
 		VideoDashManifest: "<?xml broken",
 	}
 
 	populateMedia(m, post, 0)
-	if m.VideoURL != "https://cdn.instagram.com/720.mp4" {
+	if m.VideoURL != fallbackVideoURL {
 		t.Fatalf("VideoURL = %q, want video_versions fallback", m.VideoURL)
+	}
+	if m.AudioURL != "" {
+		t.Fatalf("AudioURL = %q, want empty on fallback", m.AudioURL)
+	}
+}
+
+// noBaseURLManifestFixture is a manifest whose representations carry NO
+// BaseURL — exercises the defensive guard: populateMedia must fall back to
+// video_versions instead of committing to empty-URL DASH reps that would
+// hard-fail the download.
+const noBaseURLManifestFixture = `<?xml version="1.0" encoding="UTF-8"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" mediaPresentationDuration="PT0H0M30.000S" type="static">
+  <Period>
+    <AdaptationSet mimeType="video/mp4" contentType="video">
+      <Representation id="240p" width="426" height="240" bandwidth="80000" codecs="avc1.4d401e"/>
+      <Representation id="1080p" width="1080" height="1920" bandwidth="2301000" codecs="avc1.640028"/>
+    </AdaptationSet>
+    <AdaptationSet mimeType="audio/mp4" contentType="audio">
+      <Representation id="audio" bandwidth="64000" codecs="mp4a.40.2"/>
+    </AdaptationSet>
+  </Period>
+</MPD>`
+
+func TestPopulateMediaManifestNoBaseURLFallsBack(t *testing.T) {
+	m := &media.Media{Metadata: make(map[string]string)}
+	post := threads.Post{
+		Videos: []threads.MediaVersion{
+			{URL: fallbackVideoURL, Width: 720, Height: 1280},
+		},
+		VideoDashManifest: noBaseURLManifestFixture,
+	}
+
+	populateMedia(m, post, 0)
+
+	if m.VideoURL != fallbackVideoURL {
+		t.Fatalf("VideoURL = %q, want video_versions fallback (no BaseURL in manifest)", m.VideoURL)
 	}
 	if m.AudioURL != "" {
 		t.Fatalf("AudioURL = %q, want empty on fallback", m.AudioURL)

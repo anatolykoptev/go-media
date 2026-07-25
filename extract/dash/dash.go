@@ -63,7 +63,6 @@ type representationXML struct {
 	Height    int    `xml:"height,attr"`
 	Bandwidth int64  `xml:"bandwidth,attr"`
 	Codecs    string `xml:"codecs,attr"`
-	Label     string `xml:"qualityRanking,attr"` // best-effort label slot
 	BaseURL   string `xml:"BaseURL"`
 }
 
@@ -112,7 +111,6 @@ func ParseManifest(raw string) (*Manifest, error) {
 				Height:    rx.Height,
 				Bandwidth: rx.Bandwidth,
 				Codecs:    rx.Codecs,
-				Label:     rx.Label,
 				URL:       strings.TrimSpace(rx.BaseURL),
 			}
 			if isVideo {

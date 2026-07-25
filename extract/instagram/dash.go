@@ -21,7 +21,12 @@ func populateMedia(m *media.Media, post threads.Post, maxSize int64) {
 		man, err := dash.ParseManifest(post.VideoDashManifest)
 		if err == nil && len(man.Videos) > 0 && len(man.Audios) > 0 {
 			video, audio, selErr := dash.Select(man, maxSize)
-			if selErr == nil {
+			// Require BOTH a non-empty video URL and a non-empty audio URL.
+			// A manifest whose representations carry no BaseURL (or whose
+			// selected rep has no URL) yields empty URLs — committing to the
+			// DASH branch would hard-fail the download. Fall through to
+			// video_versions exactly as the no-manifest path does.
+			if selErr == nil && video.URL != "" && audio.URL != "" {
 				applyDASH(m, man, video, audio)
 				return
 			}

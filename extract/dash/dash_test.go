@@ -198,3 +198,69 @@ func TestSelectNoVideoError(t *testing.T) {
 		t.Fatal("expected error when no video representations, got nil")
 	}
 }
+
+func TestPickVideoNoURLReturnsZero(t *testing.T) {
+	// No representation carries a BaseURL: pickVideo must signal "no usable
+	// video" (zero Representation) so the caller degrades instead of
+	// returning an empty-URL rep that hard-fails the download.
+	reps := []Representation{
+		{ID: "a", Height: 720, Bandwidth: 1000, URL: ""},
+		{ID: "b", Height: 1080, Bandwidth: 2000, URL: ""},
+	}
+	got := pickVideo(reps, 30, 0)
+	if got != (Representation{}) {
+		t.Fatalf("pickVideo no-URL reps = %+v, want zero Representation (signal degrade)", got)
+	}
+}
+
+func TestPickAudioNoURLReturnsZero(t *testing.T) {
+	reps := []Representation{
+		{ID: "a", Bandwidth: 64000, URL: ""},
+	}
+	got := pickAudio(reps)
+	if got != (Representation{}) {
+		t.Fatalf("pickAudio no-URL reps = %+v, want zero Representation (signal degrade)", got)
+	}
+}
+
+func TestSelectZeroDurationBudgetPicksSmallest(t *testing.T) {
+	// Missing duration → EstimatedSize returns 0 for every rep, so the old
+	// "fits" check treated everything as fitting and picked the HIGHEST
+	// resolution, silently uncapping the budget. With a budget set and
+	// unknown duration the selector must pick the SMALLEST (safe default).
+	man, err := ParseManifest(fixtureMPD)
+	if err != nil {
+		t.Fatalf("ParseManifest: %v", err)
+	}
+	man.Duration = 0
+	video, _, err := Select(man, 1)
+	if err != nil {
+		t.Fatalf("Select: %v", err)
+	}
+	if video.Height != 240 {
+		t.Fatalf("zero-duration + budget: picked height %d, want 240 (smallest)", video.Height)
+	}
+}
+
+func TestParseManifestQualityRankingNotLabel(t *testing.T) {
+	// qualityRanking is a NUMERIC rank (1 = best), not a display label. It
+	// must not be rendered as Representation.Label.
+	const mpd = `<?xml version="1.0"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" mediaPresentationDuration="PT0H0M10.000S">
+  <Period>
+    <AdaptationSet mimeType="video/mp4">
+      <Representation id="v0" width="1280" height="720" bandwidth="1100000" qualityRanking="1"/>
+    </AdaptationSet>
+  </Period>
+</MPD>`
+	man, err := ParseManifest(mpd)
+	if err != nil {
+		t.Fatalf("ParseManifest: %v", err)
+	}
+	if len(man.Videos) != 1 {
+		t.Fatalf("Videos: got %d, want 1", len(man.Videos))
+	}
+	if man.Videos[0].Label != "" {
+		t.Fatalf("Label = %q, want empty (qualityRanking is a rank, not a label)", man.Videos[0].Label)
+	}
+}
