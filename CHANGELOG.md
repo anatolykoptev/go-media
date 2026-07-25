@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.7](https://github.com/anatolykoptev/go-media/compare/v0.3.6...v0.3.7) (2026-07-25)
+
+
+### Fixed
+
+* **dash:** select only H.264 video representations for Telegram playback ([#31](https://github.com/anatolykoptev/go-media/issues/31)) ([50a7c96](https://github.com/anatolykoptev/go-media/commit/50a7c960f63f05bd2e9ea0cf2d81a463a0435f5f))
+
 ## [0.3.6](https://github.com/anatolykoptev/go-media/compare/v0.3.5...v0.3.6) (2026-07-25)
 
 
