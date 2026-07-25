@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.8](https://github.com/anatolykoptev/go-media/compare/v0.3.7...v0.3.8) (2026-07-25)
+
+
+### Added
+
+* **instagram:** ordered carousel slide extraction, download, and partial-failure reporting ([#33](https://github.com/anatolykoptev/go-media/issues/33)) ([9daa3e4](https://github.com/anatolykoptev/go-media/commit/9daa3e4fcc1fdd03a6c7ddc2af6ac896ee09391e))
+
 ## [0.3.7](https://github.com/anatolykoptev/go-media/compare/v0.3.6...v0.3.7) (2026-07-25)
 
 
