@@ -9,14 +9,53 @@ import (
 	"github.com/anatolykoptev/go-media/extract/dash"
 )
 
-// populateMedia sets m.VideoURL/m.AudioURL/m.Qualities from the post. When a
+// populateMedia routes the post into the right output shape on Media:
+//   - a carousel (go-threads MediaType 8) populates m.Slides with one Slide per
+//     CarouselItem, in slide order, each typed and with its best rendition
+//     chosen (H.264-only DASH selection for video slides, highest-resolution
+//     candidate for photo slides);
+//   - a single photo (MediaType 1) populates m.Slides with one image Slide;
+//   - a single video (MediaType 2, or any post with no carousel) keeps the
+//     existing VideoURL/AudioURL/Qualities path unchanged so the single-video
+//     pipeline (transcription, DASH mux, clips) runs exactly as before.
+//
+// It never returns an error: an unusable per-slide manifest degrades to that
+// slide's video_versions rather than failing the whole post.
+func populateMedia(m *media.Media, post threads.Post, maxSize int64) {
+	switch post.MediaType {
+	case mediaTypeCarousel: // carousel — one Slide per CarouselItem, in order
+		for _, ci := range post.CarouselItems {
+			m.Slides = append(m.Slides, buildSlide(ci, maxSize))
+		}
+		return
+	case mediaTypeImage: // single photo — synthesise one image slide
+		if len(post.CarouselItems) > 0 {
+			m.Slides = append(m.Slides, buildSlide(post.CarouselItems[0], maxSize))
+			return
+		}
+		// Older shape with no CarouselItems: fall back to the flattened list.
+		if best := bestImageVersion(post.Images); best.URL != "" {
+			m.Slides = append(m.Slides, media.Slide{
+				Type:   media.SlideTypeImage,
+				URL:    best.URL,
+				Width:  best.Width,
+				Height: best.Height,
+			})
+		}
+		return
+	}
+	// default: single video (MediaType 2) or unknown — existing path.
+	populateVideoURL(m, post, maxSize)
+}
+
+// populateVideoURL sets m.VideoURL/m.AudioURL/m.Qualities from the post. When a
 // DASH manifest is present and parseable it picks the best video representation
 // fitting maxSize plus the best audio representation (the processor's existing
 // mergeDASH path muxes them). When the manifest is absent or unparseable it
 // falls back to the video_versions list — the embed/SSR/proxy rungs never carry
 // a manifest and must keep working exactly as before. It never returns an
 // error: an unusable manifest degrades to video_versions rather than failing.
-func populateMedia(m *media.Media, post threads.Post, maxSize int64) {
+func populateVideoURL(m *media.Media, post threads.Post, maxSize int64) {
 	if post.VideoDashManifest != "" {
 		man, err := dash.ParseManifest(post.VideoDashManifest)
 		if err == nil && len(man.Videos) > 0 && len(man.Audios) > 0 {

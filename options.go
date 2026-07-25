@@ -2,7 +2,15 @@ package media
 
 // Options configures a single Process call.
 type Options struct {
-	MaxSize        int64   // max video file size in bytes (0 = no limit)
+	// MaxSize bounds a single downloaded file in bytes (0 = no limit). For a
+	// single video it caps the video (and the separate DASH audio stream). For
+	// a carousel / photo post it bounds EACH slide independently — an album of
+	// N slides is checked N times, once per slide; the whole-album total is
+	// NOT checked. A per-slide cap matches the existing per-file DownloadFile
+	// guard and the DASH per-representation budget; a whole-album sum would
+	// require downloading every slide first, which the streaming download
+	// cannot do mid-flight.
+	MaxSize        int64
 	ChunkSec       int     // audio chunk duration for transcription (default 20)
 	TempDir        string  // directory for temporary files (default os.TempDir())
 	ExtractClips   bool    // if true, extract video clips for each transcription chunk

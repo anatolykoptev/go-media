@@ -45,6 +45,24 @@ func (p *Processor) Process(ctx context.Context, url string, opts Options) (*Res
 		return nil, fmt.Errorf("extract: %w", err)
 	}
 
+	// Carousel / photo post: download every slide. This branch is taken only
+	// when the extractor populated m.Slides (a carousel or a single photo). A
+	// single video leaves m.Slides empty and falls through to the unchanged
+	// single-video path below, so transcription, DASH mux, clips and the
+	// --max-filesize guard behave exactly as before.
+	if len(m.Slides) > 0 {
+		return p.processSlides(ctx, m, opts)
+	}
+
+	return p.processSingleVideo(ctx, m, url, opts)
+}
+
+// processSingleVideo is the unchanged single-video pipeline: guard → download
+// → DASH mux → transcribe → clip extraction. It is the pre-carousel behaviour
+// verbatim, extracted only so Process stays under the cyclomatic-complexity
+// budget. A post with no VideoURL and no LocalPath (and no slides) hard-errors
+// here — the carousel branch above handles slide-bearing posts first.
+func (p *Processor) processSingleVideo(ctx context.Context, m *Media, url string, opts Options) (*Result, error) {
 	if m.VideoURL == "" && m.LocalPath == "" {
 		return nil, fmt.Errorf("no video URL found for %s", url)
 	}
@@ -72,6 +90,7 @@ func (p *Processor) Process(ctx context.Context, url string, opts Options) (*Res
 
 		// DASH: merge separate audio stream if present
 		if m.AudioURL != "" {
+			var err error
 			videoPath, err = p.mergeDASH(ctx, videoPath, m.AudioURL, opts.MaxSize)
 			if err != nil {
 				return nil, fmt.Errorf("dash merge: %w", err)
@@ -82,6 +101,7 @@ func (p *Processor) Process(ctx context.Context, url string, opts Options) (*Res
 	// Transcribe (optional)
 	var transcription *Transcription
 	if p.transcriber != nil {
+		var err error
 		transcription, err = ChunkAndTranscribe(ctx, videoPath, tempDir, p.transcriber, opts)
 		if err != nil {
 			// Return partial result with error — consumer can check both.
