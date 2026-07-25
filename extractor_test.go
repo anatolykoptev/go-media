@@ -24,6 +24,24 @@ func (m *mockExtractor) Extract(_ context.Context, url string) (*media.Media, er
 	return m.media, nil
 }
 
+// mockBudgetExtractor records the maxSize it received so a test can prove the
+// processor threaded opts.MaxSize into the extractor.
+type mockBudgetExtractor struct {
+	mockExtractor
+	gotMaxSize int64
+}
+
+func (m *mockBudgetExtractor) ExtractWithBudget(
+	_ context.Context, url string, maxSize int64,
+) (*media.Media, error) {
+	m.gotMaxSize = maxSize
+	if m.err != nil {
+		return nil, m.err
+	}
+	m.media.URL = url
+	return m.media, nil
+}
+
 func TestRegistryMatch(t *testing.T) {
 	r := media.NewRegistry()
 
@@ -93,5 +111,42 @@ func TestRegistryPlatforms(t *testing.T) {
 	}
 	if platforms[0] != "instagram" || platforms[1] != "youtube" {
 		t.Fatalf("unexpected platforms: %v", platforms)
+	}
+}
+
+func TestRegistryExtractWithBudgetRoutesToBudgetAware(t *testing.T) {
+	r := media.NewRegistry()
+	bx := &mockBudgetExtractor{
+		mockExtractor: mockExtractor{
+			name:    "test",
+			matches: true,
+			media:   &media.Media{Platform: "test", VideoURL: "https://cdn.test.com/v.mp4"},
+		},
+	}
+	r.Register(bx)
+
+	_, err := r.ExtractWithBudget(context.Background(), "https://test.com/p/1", 42_000_000)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if bx.gotMaxSize != 42_000_000 {
+		t.Fatalf("extractor received maxSize=%d, want 42000000", bx.gotMaxSize)
+	}
+}
+
+func TestRegistryExtractWithBudgetFallsBackForPlainExtractor(t *testing.T) {
+	r := media.NewRegistry()
+	r.Register(&mockExtractor{
+		name:    "test",
+		matches: true,
+		media:   &media.Media{Platform: "test", VideoURL: "https://cdn.test.com/v.mp4"},
+	})
+
+	m, err := r.ExtractWithBudget(context.Background(), "https://test.com/p/1", 42_000_000)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if m.VideoURL != "https://cdn.test.com/v.mp4" {
+		t.Fatalf("VideoURL = %q", m.VideoURL)
 	}
 }

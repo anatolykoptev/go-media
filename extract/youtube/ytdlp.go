@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	media "github.com/anatolykoptev/go-media"
@@ -37,13 +38,16 @@ type ytdlpInfo struct {
 }
 
 // download uses yt-dlp to download the video to outputPath.
-// Returns *media.Media with LocalPath set (file already downloaded).
+// Returns *media.Media with LocalPath set (file already downloaded). maxSize
+// (bytes, 0 = no limit) is passed to yt-dlp as --max-filesize so an oversized
+// video is aborted by yt-dlp instead of downloaded in full only to fail later.
 func (b *ytdlpBackend) download(
 	ctx context.Context,
 	videoURL, outputPath string,
 	cfg Config,
+	maxSize int64,
 ) (*media.Media, error) {
-	cmd := b.buildCommand(outputPath, cfg)
+	cmd := b.buildCommand(outputPath, cfg, maxSize)
 
 	result, err := cmd.Run(ctx, videoURL)
 	if err != nil {
@@ -70,8 +74,9 @@ func (b *ytdlpBackend) download(
 	return m, nil
 }
 
-// buildCommand creates a configured ytdlp.Command.
-func (b *ytdlpBackend) buildCommand(outputPath string, cfg Config) *ytdlp.Command {
+// buildCommand creates a configured ytdlp.Command. maxSize (bytes, 0 = no
+// limit) adds --max-filesize so yt-dlp aborts an oversized download early.
+func (b *ytdlpBackend) buildCommand(outputPath string, cfg Config, maxSize int64) *ytdlp.Command {
 	cmd := ytdlp.New().
 		Format(defaultFormat).
 		Output(outputPath).
@@ -89,6 +94,11 @@ func (b *ytdlpBackend) buildCommand(outputPath string, cfg Config) *ytdlp.Comman
 
 	if cfg.Proxy != "" {
 		cmd.Proxy(cfg.Proxy)
+	}
+
+	if maxSize > 0 {
+		// Suffixless value is interpreted by yt-dlp as bytes.
+		cmd.MaxFileSize(strconv.FormatInt(maxSize, 10))
 	}
 
 	return cmd

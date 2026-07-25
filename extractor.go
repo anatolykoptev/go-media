@@ -15,6 +15,16 @@ type Extractor interface {
 	Extract(ctx context.Context, url string) (*Media, error)
 }
 
+// BudgetAwareExtractor is an optional capability implemented by extractors that
+// can pick a quality representation fitting a byte budget (e.g. choosing a DASH
+// representation, or passing --max-filesize to yt-dlp). The Registry routes to
+// ExtractWithBudget when the extractor implements it; otherwise it falls back
+// to Extract and the budget is enforced later by DownloadFile. maxSize == 0
+// means no limit.
+type BudgetAwareExtractor interface {
+	ExtractWithBudget(ctx context.Context, url string, maxSize int64) (*Media, error)
+}
+
 // Registry holds registered extractors and dispatches URLs to the matching one.
 type Registry struct {
 	extractors []Extractor
@@ -46,6 +56,20 @@ func (r *Registry) Extract(ctx context.Context, url string) (*Media, error) {
 	e := r.Match(url)
 	if e == nil {
 		return nil, fmt.Errorf("no extractor matches URL: %s", url)
+	}
+	return e.Extract(ctx, url)
+}
+
+// ExtractWithBudget is like Extract but threads a byte budget into extractors
+// that implement BudgetAwareExtractor. Plain extractors fall back to Extract
+// (the budget is still enforced later by DownloadFile for URL-based downloads).
+func (r *Registry) ExtractWithBudget(ctx context.Context, url string, maxSize int64) (*Media, error) {
+	e := r.Match(url)
+	if e == nil {
+		return nil, fmt.Errorf("no extractor matches URL: %s", url)
+	}
+	if bx, ok := e.(BudgetAwareExtractor); ok {
+		return bx.ExtractWithBudget(ctx, url, maxSize)
 	}
 	return e.Extract(ctx, url)
 }
