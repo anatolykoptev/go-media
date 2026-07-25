@@ -14,6 +14,9 @@ const (
 	secondsPerHour = 3600
 	secondsPerMin  = 60
 	bitsPerByte    = 8
+
+	kindVideo = "video"
+	kindAudio = "audio"
 )
 
 // Representation is a single DASH representation (video or audio) with the
@@ -28,6 +31,10 @@ type Representation struct {
 	Codecs    string
 	Label     string // quality label if present in the manifest, else empty
 	URL       string // resolved media URL from BaseURL
+	// ContentLength is the exact download size in bytes when the manifest
+	// carries it (e.g. Instagram's FBContentLength attribute). 0 when absent;
+	// the selector then falls back to the bandwidth*duration/8 estimate.
+	ContentLength int64
 }
 
 // Manifest is a parsed MPD split into video and audio AdaptationSets.
@@ -58,12 +65,14 @@ type adaptationXML struct {
 }
 
 type representationXML struct {
-	ID        string `xml:"id,attr"`
-	Width     int    `xml:"width,attr"`
-	Height    int    `xml:"height,attr"`
-	Bandwidth int64  `xml:"bandwidth,attr"`
-	Codecs    string `xml:"codecs,attr"`
-	BaseURL   string `xml:"BaseURL"`
+	ID              string `xml:"id,attr"`
+	Width           int    `xml:"width,attr"`
+	Height          int    `xml:"height,attr"`
+	Bandwidth       int64  `xml:"bandwidth,attr"`
+	Codecs          string `xml:"codecs,attr"`
+	MimeType        string `xml:"mimeType,attr"`
+	FBContentLength int64  `xml:"FBContentLength,attr"`
+	BaseURL         string `xml:"BaseURL"`
 }
 
 // ParseManifest parses a raw MPD XML string into a Manifest. A malformed or
@@ -94,26 +103,13 @@ func ParseManifest(raw string) (*Manifest, error) {
 	}
 
 	for _, as := range sets {
-		mime := as.MimeType
-		if mime == "" {
-			mime = as.ContentType
-		}
-		isVideo := strings.HasPrefix(mime, "video/")
-		isAudio := strings.HasPrefix(mime, "audio/")
-		if !isVideo && !isAudio {
+		kind := adaptationKind(as)
+		if kind == "" {
 			continue
 		}
 		for _, rx := range as.Representations {
-			rep := Representation{
-				ID:        rx.ID,
-				MimeType:  mime,
-				Width:     rx.Width,
-				Height:    rx.Height,
-				Bandwidth: rx.Bandwidth,
-				Codecs:    rx.Codecs,
-				URL:       strings.TrimSpace(rx.BaseURL),
-			}
-			if isVideo {
+			rep := buildRepresentation(as, rx)
+			if kind == kindVideo {
 				man.Videos = append(man.Videos, rep)
 			} else {
 				man.Audios = append(man.Audios, rep)
@@ -122,6 +118,61 @@ func ParseManifest(raw string) (*Manifest, error) {
 	}
 
 	return man, nil
+}
+
+// buildRepresentation maps a parsed Representation element onto the public
+// Representation type. The per-rep MimeType is resolved from the most specific
+// source available: AdaptationSet.mimeType (full, e.g. "video/mp4") is
+// preferred; else the Representation-level mimeType (Instagram puts it here);
+// else the bare AdaptationSet.contentType ("video") as a last resort.
+func buildRepresentation(as adaptationXML, rx representationXML) Representation {
+	repMime := strings.TrimSpace(as.MimeType)
+	if repMime == "" {
+		repMime = strings.TrimSpace(rx.MimeType)
+	}
+	if repMime == "" {
+		repMime = strings.TrimSpace(as.ContentType)
+	}
+	return Representation{
+		ID:            rx.ID,
+		MimeType:      repMime,
+		Width:         rx.Width,
+		Height:        rx.Height,
+		Bandwidth:     rx.Bandwidth,
+		Codecs:        rx.Codecs,
+		URL:           strings.TrimSpace(rx.BaseURL),
+		ContentLength: rx.FBContentLength,
+	}
+}
+
+// adaptationKind classifies an AdaptationSet as "video" or "audio" ("" if
+// neither). A set is video/audio when its mimeType is "video/mp4"/"audio/mp4"
+// OR its bare contentType is "video"/"audio" (no slash — Instagram sends this
+// form, with mimeType on the Representation instead). When the AdaptationSet
+// carries neither, the Representation-level mimeType is consulted (that is
+// where Instagram puts it). Matching is case-insensitive and tolerates
+// surrounding whitespace.
+func adaptationKind(as adaptationXML) string {
+	candidate := strings.TrimSpace(as.MimeType)
+	if candidate == "" {
+		candidate = strings.TrimSpace(as.ContentType)
+	}
+	if candidate == "" {
+		for _, rx := range as.Representations {
+			if rm := strings.TrimSpace(rx.MimeType); rm != "" {
+				candidate = rm
+				break
+			}
+		}
+	}
+	candidate = strings.ToLower(strings.TrimSpace(candidate))
+	switch {
+	case candidate == kindVideo || strings.HasPrefix(candidate, kindVideo+"/"):
+		return kindVideo
+	case candidate == kindAudio || strings.HasPrefix(candidate, kindAudio+"/"):
+		return kindAudio
+	}
+	return ""
 }
 
 // parseDuration parses an ISO 8601 PT duration string (e.g. "PT0H0M30.000S")
