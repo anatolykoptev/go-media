@@ -43,8 +43,8 @@ jobs:
         # no-op when the pinned version is already present, self-heals on
         # a fresh runner.
         run: |
-          BIN="$(go env GOPATH)/bin/govulncheck"
-          go version -m "$BIN" 2>/dev/null | grep -q "v1.6.0" \
+          BIN="$(GOWORK=off go env GOPATH)/bin/govulncheck"
+          GOWORK=off go version -m "$BIN" 2>/dev/null | grep -q "v1.6.0" \
             || GOWORK=off go install golang.org/x/vuln/cmd/govulncheck@v1.6.0
 
       - name: make preflight

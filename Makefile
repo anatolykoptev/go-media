@@ -8,8 +8,8 @@ GOVULNCHECK_VERSION := v1.6.0
 # (ci-setup: $(go env GOPATH)/bin is absent from self-hosted runner PATH,
 # and hosted images mask the gap). Fall back to GOPATH/bin, guard with a
 # hint instead of dying with a bare "not found".
-GOLANGCI_LINT := $(shell command -v golangci-lint 2>/dev/null || echo $$(go env GOPATH)/bin/golangci-lint)
-GOVULNCHECK := $(shell command -v govulncheck 2>/dev/null || echo $$(go env GOPATH)/bin/govulncheck)
+GOLANGCI_LINT := $(shell command -v golangci-lint 2>/dev/null || echo $$(GOWORK=off go env GOPATH)/bin/golangci-lint)
+GOVULNCHECK := $(shell command -v govulncheck 2>/dev/null || echo $$(GOWORK=off go env GOPATH)/bin/govulncheck)
 
 build:
 	GOWORK=off go build ./...
@@ -39,4 +39,4 @@ preflight: build
 	@GOWORK=off "$(GOVULNCHECK)" ./... || true
 
 clean:
-	go clean -cache -testcache
+	GOWORK=off go clean -cache -testcache
