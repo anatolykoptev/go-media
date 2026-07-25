@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.5](https://github.com/anatolykoptev/go-media/compare/v0.3.4...v0.3.5) (2026-07-25)
+
+
+### Added
+
+* **instagram:** DASH manifest parsing + budget-aware quality selection (unlocks 1080p) ([#27](https://github.com/anatolykoptev/go-media/issues/27)) ([a97cbcd](https://github.com/anatolykoptev/go-media/commit/a97cbcd2b900d672f3ac6f042f41aad83abdb4fe))
+
 ## [0.3.4](https://github.com/anatolykoptev/go-media/compare/v0.3.3...v0.3.4) (2026-07-24)
 
 
