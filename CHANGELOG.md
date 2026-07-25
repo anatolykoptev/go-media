@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.9](https://github.com/anatolykoptev/go-media/compare/v0.3.8...v0.3.9) (2026-07-25)
+
+
+### Added
+
+* **instagram:** merge full Threads author chain into extracted Media ([#36](https://github.com/anatolykoptev/go-media/issues/36)) ([ca91629](https://github.com/anatolykoptev/go-media/commit/ca91629dcf756d0b46f74e1fddbd471dc1ee6e4b))
+
 ## [0.3.8](https://github.com/anatolykoptev/go-media/compare/v0.3.7...v0.3.8) (2026-07-25)
 
 
