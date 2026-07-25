@@ -54,22 +54,40 @@ func pickVideo(reps []Representation, duration float64, budget int64) Representa
 		return usable[0]
 	}
 
-	// Unknown duration → EstimatedSize returns 0 for every rep, so the
-	// "fits" check below would treat everything as fitting and pick the
-	// HIGHEST resolution, silently uncapping the budget. A budget is a hard
-	// cap; with unknown size the only rep we can be confident fits is the
+	// If no representation carries a known size (no FBContentLength and no
+	// duration → effectiveSize is 0 for every rep), the fits check below
+	// would treat every size-0 rep as fitting and pick the HIGHEST
+	// resolution, silently uncapping the budget. A budget is a hard cap;
+	// with unknown sizes the only rep we can be confident fits is the
 	// smallest, so pick it as the safe default.
-	if duration <= 0 {
+	hasSize := false
+	for _, r := range usable {
+		if effectiveSize(r, duration) > 0 {
+			hasSize = true
+			break
+		}
+	}
+	if !hasSize {
 		return usable[len(usable)-1]
 	}
 
 	for _, r := range usable {
-		if EstimatedSize(r, duration) <= budget {
+		if effectiveSize(r, duration) <= budget {
 			return r
 		}
 	}
 	// Nothing fits — degrade to the smallest (last after desc sort).
 	return usable[len(usable)-1]
+}
+
+// effectiveSize returns the best known download size in bytes for a
+// representation: the exact FBContentLength (ContentLength) when present, else
+// the bandwidth*duration/8 estimate. Returns 0 when neither is available.
+func effectiveSize(r Representation, duration float64) int64 {
+	if r.ContentLength > 0 {
+		return r.ContentLength
+	}
+	return EstimatedSize(r, duration)
 }
 
 // pickAudio returns the highest-bandwidth audio representation with a URL.

@@ -4,10 +4,14 @@ import (
 	"testing"
 )
 
-// fixtureMPD is a trimmed real-shaped Instagram DASH manifest: multiple video
-// representations 240p→1080p, one audio representation, BaseURL elements, and a
-// 30s mediaPresentationDuration. Bandwidths chosen so size estimates are
-// round: size = bandwidth(bps) * duration(s) / 8.
+// fixtureMPD is a SYNTHETIC standard-DASH manifest (mimeType on the
+// AdaptationSet): multiple video representations 240p→1080p, one audio
+// representation, BaseURL elements, and a 30s mediaPresentationDuration. This
+// is NOT Instagram's shape — Instagram puts mimeType on the Representation and
+// leaves the AdaptationSet with only a bare contentType (see instagramMPD in
+// dash_real_test.go). This fixture is kept because mimeType-on-AdaptationSet is
+// a shape other real DASH services send; it guards that path. Bandwidths chosen
+// so size estimates are round: size = bandwidth(bps) * duration(s) / 8.
 const fixtureMPD = `<?xml version="1.0" encoding="UTF-8"?>
 <MPD xmlns="urn:mpeg:dash:schema:mpd:2011" mediaPresentationDuration="PT0H0M30.000S" type="static">
   <Period>
