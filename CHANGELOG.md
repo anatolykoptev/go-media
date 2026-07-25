@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.6](https://github.com/anatolykoptev/go-media/compare/v0.3.5...v0.3.6) (2026-07-25)
+
+
+### Fixed
+
+* **dash:** classify bare contentType + prefer FBContentLength ([#29](https://github.com/anatolykoptev/go-media/issues/29)) ([4ebb159](https://github.com/anatolykoptev/go-media/commit/4ebb15982a1a8968fde93bd1c5d78a0941656b24))
+
 ## [0.3.5](https://github.com/anatolykoptev/go-media/compare/v0.3.4...v0.3.5) (2026-07-25)
 
 
