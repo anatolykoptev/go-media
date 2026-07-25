@@ -101,7 +101,8 @@ func (p *Processor) processSingleVideo(ctx context.Context, m *Media, url string
 	// Transcribe (optional)
 	var transcription *Transcription
 	if p.transcriber != nil {
-		transcription, err := ChunkAndTranscribe(ctx, videoPath, tempDir, p.transcriber, opts)
+		var err error
+		transcription, err = ChunkAndTranscribe(ctx, videoPath, tempDir, p.transcriber, opts)
 		if err != nil {
 			// Return partial result with error — consumer can check both.
 			return &Result{
