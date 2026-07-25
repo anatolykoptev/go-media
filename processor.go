@@ -158,7 +158,7 @@ func (p *Processor) mergeDASH(ctx context.Context, videoPath, audioURL string, m
 func sanitizeFilename(url string) string {
 	h := uint32(0)
 	for _, c := range url {
-		h = h*hashMultiplier + uint32(c)
+		h = h*hashMultiplier + uint32(c) //nolint:gosec // G115: URL runes are ASCII 0-127 (RFC 3986); cast cannot overflow
 	}
 	return fmt.Sprintf("%08x", h)
 }

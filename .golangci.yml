@@ -48,6 +48,11 @@ linters:
     rules:
       - linters: [gocritic]
         text: "hugeParam"
+      # goconst flags mock fixture strings ("test", "youtube", "instagram",
+      # URL templates) repeated across test files — extracting constants for
+      # test data reduces readability without adding value.
+      - linters: [goconst]
+        path: "_test\\.go$"
 
 formatters:
   enable:

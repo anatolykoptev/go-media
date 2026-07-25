@@ -18,6 +18,9 @@ type oxBackend struct {
 	client  *http.Client
 }
 
+// mediaTypeVideo is the media_type value sent to ox-browser for video downloads.
+const mediaTypeVideo = "video"
+
 // mediaDownloadRequest is the ox-browser /media/download API request.
 type mediaDownloadRequest struct {
 	URL       string `json:"url"`
@@ -63,7 +66,7 @@ type mediaQuality struct {
 func (b *oxBackend) extract(ctx context.Context, videoURL string) (*media.Media, error) {
 	payload, _ := json.Marshal(mediaDownloadRequest{
 		URL:       videoURL,
-		MediaType: "video",
+		MediaType: mediaTypeVideo,
 	})
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
