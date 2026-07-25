@@ -38,8 +38,9 @@ func (p *Processor) Extract(ctx context.Context, url string) (*Media, error) {
 func (p *Processor) Process(ctx context.Context, url string, opts Options) (*Result, error) {
 	opts.defaults()
 
-	// Extract media metadata
-	m, err := p.registry.Extract(ctx, url)
+	// Extract media metadata, threading the byte budget into budget-aware
+	// extractors (DASH representation selection, yt-dlp --max-filesize).
+	m, err := p.registry.ExtractWithBudget(ctx, url, opts.MaxSize)
 	if err != nil {
 		return nil, fmt.Errorf("extract: %w", err)
 	}

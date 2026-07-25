@@ -37,6 +37,14 @@ func (e *Extractor) Match(url string) bool {
 }
 
 func (e *Extractor) Extract(ctx context.Context, rawURL string) (*media.Media, error) {
+	return e.ExtractWithBudget(ctx, rawURL, 0)
+}
+
+// ExtractWithBudget fetches post metadata and picks the best DASH video
+// representation that fits the byte budget (0 = no limit). When the post
+// carries no DASH manifest (embed/SSR/proxy rungs) or the manifest is
+// unparseable, it falls back to the video_versions behaviour unchanged.
+func (e *Extractor) ExtractWithBudget(ctx context.Context, rawURL string, maxSize int64) (*media.Media, error) {
 	igCode, threadsUser, threadsCode, err := parseURL(rawURL)
 	if err != nil {
 		return nil, fmt.Errorf("instagram: %w", err)
@@ -82,16 +90,7 @@ func (e *Extractor) Extract(ctx context.Context, rawURL string) (*media.Media, e
 	}
 	m.Metadata["code"] = code
 
-	if len(post.Videos) > 0 {
-		m.VideoURL = post.Videos[0].URL
-		for _, v := range post.Videos {
-			m.Qualities = append(m.Qualities, media.Quality{
-				URL:    v.URL,
-				Width:  v.Width,
-				Height: v.Height,
-			})
-		}
-	}
+	populateMedia(m, post, maxSize)
 
 	return m, nil
 }

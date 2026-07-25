@@ -81,6 +81,14 @@ func (e *Extractor) Match(rawURL string) bool {
 // 2. go-ytdlp (reliable, handles POT/anti-bot)
 // 3. ox-browser (CF bypass, page parsing)
 func (e *Extractor) Extract(ctx context.Context, rawURL string) (*media.Media, error) {
+	return e.ExtractWithBudget(ctx, rawURL, 0)
+}
+
+// ExtractWithBudget is like Extract but threads a byte budget into the yt-dlp
+// backend as --max-filesize (the kkdai and ox-browser backends return URLs that
+// are budget-checked later by the processor's DownloadFile). maxSize == 0 means
+// no limit.
+func (e *Extractor) ExtractWithBudget(ctx context.Context, rawURL string, maxSize int64) (*media.Media, error) {
 	videoID, err := parseVideoID(rawURL)
 	if err != nil {
 		return nil, fmt.Errorf("youtube: %w", err)
@@ -99,7 +107,7 @@ func (e *Extractor) Extract(ctx context.Context, rawURL string) (*media.Media, e
 		if dirErr != nil {
 			err = fmt.Errorf("%w; ytdlp: %w", err, dirErr)
 		} else {
-			m, ytErr := e.ydlp.download(ctx, rawURL, outputPath, e.cfg)
+			m, ytErr := e.ydlp.download(ctx, rawURL, outputPath, e.cfg, maxSize)
 			if ytErr == nil {
 				return m, nil
 			}

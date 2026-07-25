@@ -153,3 +153,40 @@ func TestProcessorProcessNoTranscriber(t *testing.T) {
 		t.Fatal("expected nil transcription when no transcriber configured")
 	}
 }
+
+// TestProcessorProcessThreadsMaxSizeToExtractor proves opts.MaxSize is threaded
+// from Process into a budget-aware extractor (the path the DASH selector and
+// the yt-dlp max-filesize guard both depend on).
+func TestProcessorProcessThreadsMaxSizeToExtractor(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "video/mp4")
+		_, _ = w.Write([]byte("fake-video-content"))
+	}))
+	defer srv.Close()
+
+	const budget = 42_000_000
+	bx := &mockBudgetExtractor{
+		mockExtractor: mockExtractor{
+			name:    "test",
+			matches: true,
+			media:   &media.Media{Platform: "test", VideoURL: srv.URL + "/video.mp4"},
+		},
+	}
+
+	tmpDir := t.TempDir()
+	p := media.NewProcessor(
+		media.WithExtractor(bx),
+		media.WithHTTPClient(srv.Client()),
+	)
+
+	if _, err := p.Process(context.Background(), "https://test.com/post/1", media.Options{
+		TempDir: tmpDir,
+		MaxSize: budget,
+	}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if bx.gotMaxSize != budget {
+		t.Fatalf("extractor received MaxSize=%d, want %d", bx.gotMaxSize, budget)
+	}
+}
