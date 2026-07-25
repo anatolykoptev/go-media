@@ -45,6 +45,10 @@ type Config struct {
 // maxVideoHeight is the default maximum video height for kkdai backend.
 const maxVideoHeight = 1080
 
+// platformName is the platform identifier returned by Name() and set on
+// extracted Media.Platform by all backends.
+const platformName = "youtube"
+
 // Extractor implements media.Extractor for YouTube.
 type Extractor struct {
 	cfg  Config
@@ -69,7 +73,7 @@ func New(cfg Config) *Extractor {
 }
 
 // Name returns the platform name.
-func (e *Extractor) Name() string { return "youtube" }
+func (e *Extractor) Name() string { return platformName }
 
 // Match reports whether the URL is a YouTube video URL.
 func (e *Extractor) Match(rawURL string) bool {
