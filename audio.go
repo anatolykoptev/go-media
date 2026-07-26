@@ -58,6 +58,36 @@ func ExtractAudioChunk(ctx context.Context, videoPath, outputPath string, offset
 	return nil
 }
 
+// MergeDASH downloads a separate audio stream and muxes it with the video
+// using ffmpeg, then replaces the original video-only file with the merged
+// result. It is the single authoritative DASH-mux path used by both the
+// pipeline's single-video and carousel-slide paths (via (*Processor).mergeDASH)
+// and by external callers (e.g. vaelor-agent's Threads chain-post delivery).
+//
+// On a mux or rename failure it returns (videoPath, err) — the caller decides
+// whether to degrade to video-only or treat the slide as failed. The audio
+// file is always cleaned up. On success the returned path equals videoPath
+// (the merged file was renamed over the original).
+func MergeDASH(ctx context.Context, client HTTPDoer, videoPath, audioURL string, maxSize int64) (string, error) {
+	audioPath := videoPath + ".audio.m4a"
+	if err := DownloadFile(ctx, client, audioURL, audioPath, maxSize); err != nil {
+		return videoPath, fmt.Errorf("download audio: %w", err) //nolint:wrapcheck // already wrapped
+	}
+	defer cleanupFile(audioPath)
+
+	mergedPath := videoPath + ".merged.mp4"
+	if err := MergeAudioVideo(ctx, videoPath, audioPath, mergedPath); err != nil {
+		return videoPath, err
+	}
+
+	// Replace original video-only file with merged.
+	_ = os.Remove(videoPath) //nolint:errcheck // best-effort cleanup
+	if err := os.Rename(mergedPath, videoPath); err != nil {
+		return mergedPath, fmt.Errorf("rename merged file: %w", err)
+	}
+	return videoPath, nil
+}
+
 // MergeAudioVideo combines a video-only and audio-only file into a single MP4 using ffmpeg.
 // Used for DASH streams where video and audio are separate.
 func MergeAudioVideo(ctx context.Context, videoPath, audioPath, outputPath string) error {

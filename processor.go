@@ -134,24 +134,12 @@ func (p *Processor) Platforms() []string {
 }
 
 // mergeDASH downloads a separate audio stream and muxes it with the video using ffmpeg.
+// Thin wrapper over the exported MergeDASH so the pipeline's single-video and
+// carousel-slide paths share one implementation with external callers
+// (vaelor-agent's Threads chain-post delivery). Behaviour is identical to
+// calling MergeDASH directly with p.httpClient.
 func (p *Processor) mergeDASH(ctx context.Context, videoPath, audioURL string, maxSize int64) (string, error) {
-	audioPath := videoPath + ".audio.m4a"
-	if err := DownloadFile(ctx, p.httpClient, audioURL, audioPath, maxSize); err != nil {
-		return videoPath, fmt.Errorf("download audio: %w", err) //nolint:wrapcheck // already wrapped
-	}
-	defer cleanupFile(audioPath)
-
-	mergedPath := videoPath + ".merged.mp4"
-	if err := MergeAudioVideo(ctx, videoPath, audioPath, mergedPath); err != nil {
-		return videoPath, err
-	}
-
-	// Replace original video-only file with merged
-	_ = os.Remove(videoPath) //nolint:errcheck // best-effort cleanup
-	if err := os.Rename(mergedPath, videoPath); err != nil {
-		return mergedPath, fmt.Errorf("rename merged file: %w", err)
-	}
-	return videoPath, nil
+	return MergeDASH(ctx, p.httpClient, videoPath, audioURL, maxSize)
 }
 
 // sanitizeFilename creates a safe filename from a URL.
