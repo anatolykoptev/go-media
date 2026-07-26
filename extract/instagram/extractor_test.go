@@ -165,7 +165,7 @@ func TestPopulateMediaWithManifest(t *testing.T) {
 	populateMedia(m, post, 0)
 
 	// DASH pair must be set: 1080p video (best, no budget) + audio.
-	if m.VideoURL != "https://video-edge-1080p.example.com/video.mp4" {
+	if m.VideoURL != dash1080pVideoURL {
 		t.Fatalf("VideoURL = %q, want 1080p DASH url", m.VideoURL)
 	}
 	if m.AudioURL != "https://video-edge-audio.example.com/audio.m4a" {
