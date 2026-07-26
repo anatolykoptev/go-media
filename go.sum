@@ -6,8 +6,8 @@ github.com/anatolykoptev/go-stealth v1.19.1 h1:7w25zGDUMy0kz4cP2p/J9zjCgfUA6U1ak
 github.com/anatolykoptev/go-stealth v1.19.1/go.mod h1:1Fevj8WfJDJ9h/t4Bl8MtHbuQ92ZPjIm8SR6/vnwJsQ=
 github.com/anatolykoptev/go-stt v0.3.0 h1:Mo+tg4Z7wNlVUwZ1Tlrga8MXGIgy4Trx9CE+orzSO7o=
 github.com/anatolykoptev/go-stt v0.3.0/go.mod h1:ZBaKmLsDVOogdZwOzSq5np7gBzS9IsbaTzn1iMvDxp0=
-github.com/anatolykoptev/go-threads v0.9.0 h1:b5b0MGTJKjiaF2qsjg5UCl1B1ryr1uhfz53YJrFUUdw=
-github.com/anatolykoptev/go-threads v0.9.0/go.mod h1:EZTWWGCMfAbzzLv6RABYuanQSpqYAvPOAb4IVcyrir8=
+github.com/anatolykoptev/go-threads v0.9.1 h1:QMHDKSuD3s7AFt8F4RvEs5wpP4RFNnv5tMuiMu7AbD0=
+github.com/anatolykoptev/go-threads v0.9.1/go.mod h1:EZTWWGCMfAbzzLv6RABYuanQSpqYAvPOAb4IVcyrir8=
 github.com/andybalholm/brotli v1.2.0 h1:ukwgCxwYrmACq68yiUqwIWnGY0cTPox/M94sVwToPjQ=
 github.com/andybalholm/brotli v1.2.0/go.mod h1:rzTDkvFWvIrjDXZHkuS16NPggd91W3kUSvPlQ1pLaKY=
 github.com/bdandy/go-errors v1.2.2 h1:WdFv/oukjTJCLa79UfkGmwX7ZxONAihKu4V0mLIs11Q=
