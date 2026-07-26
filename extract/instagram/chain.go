@@ -128,21 +128,70 @@ func chainPostMedia(chain *threads.Chain, maxSize int64) []media.PostMedia {
 	return posts
 }
 
-// postSlides builds the per-slide media for one chain post by ranging its
-// CarouselItems through buildSlide — the SAME rendition-selection helper
-// the linked/root post's carousel uses (dash.Select for video slides,
-// bestImageVersion for photo slides, bestVideoVersion fallback). go-threads
-// synthesises CarouselItems as a one-item list for a single-media post and
-// a non-nil empty slice for a text-only post (buildCarouselItems), so this
-// ONE code path covers carousel, single-photo, single-video, and text-only
-// without a second Images/Videos derivation. Ordering is slide order. A
-// slide whose rendition is unusable is returned with an empty URL
-// (buildSlide's contract) so the processor reports it as a failed slide
-// rather than the extractor silently dropping the post's media.
+// postSlides builds the per-slide media for one chain post. It ranges the
+// post's CarouselItems through buildSlide — the SAME rendition-selection
+// helper the linked/root post's carousel uses (dash.Select for video
+// slides, bestImageVersion for photo slides, bestVideoVersion fallback).
+// go-threads synthesises CarouselItems as a one-item list for a
+// single-media post and a non-nil empty slice for a text-only post
+// (buildCarouselItems, parsers.go:598), so that ONE code path covers
+// carousel, single-photo, single-video, and text-only.
+//
+// FALLBACK: the go-threads instagram.go embed/SSR/proxy rungs
+// (instagram.go:432-441, :500-507) set post.MediaType + post.Images /
+// post.Videos DIRECTLY and never synthesise CarouselItems (only the
+// graphql convertPost path does, via buildCarouselItems). On those posts
+// CarouselItems is empty while the flattened lists carry the media — yet
+// mediaNote (go-threads chain.go:423-440) still advertises
+// "[media: photo]" / "[media: video]" off MediaType, producing exactly the
+// text/media mismatch this branch exists to remove. When CarouselItems is
+// empty but Images/Videos are not, fall back to the flattened lists by
+// routing the post's own media through the SAME buildSlide helper
+// (synthesising one CarouselItem from the post's fields) — no second
+// rendition-selection rule. For a photo this calls bestImageVersion,
+// mirroring populateMedia's flat-image fallback (dash.go:37); for a video
+// it runs dash.Select then bestVideoVersion, the carousel video-slide
+// rule. A post with CarouselItems populated takes ONLY the carousel branch
+// — parsers.go:563-572 already flattens carousel slides into Images/Videos,
+// so a naive union would duplicate every slide. A slide whose rendition is
+// unusable is returned with an empty URL (buildSlide's contract) so the
+// processor reports it as a failed slide rather than the extractor
+// silently dropping the post's media.
 func postSlides(post threads.Post, maxSize int64) []media.Slide {
-	slides := make([]media.Slide, 0, len(post.CarouselItems))
-	for _, ci := range post.CarouselItems {
-		slides = append(slides, buildSlide(ci, maxSize))
+	if len(post.CarouselItems) > 0 {
+		slides := make([]media.Slide, 0, len(post.CarouselItems))
+		for _, ci := range post.CarouselItems {
+			slides = append(slides, buildSlide(ci, maxSize))
+		}
+		return slides
 	}
-	return slides
+	// CarouselItems empty — text-only post, or the instagram.go flat path
+	// (MediaType + Images/Videos set, CarouselItems never synthesised).
+	// No media at all → no slides, so the invariant
+	// mediaNote != "" ⟺ ≥1 slide holds in both directions.
+	if len(post.Images) == 0 && len(post.Videos) == 0 {
+		return nil
+	}
+	// Flat media present — one CarouselItem synthesised from the post's own
+	// fields = one slide for one flat post. No double count: this branch
+	// only runs when CarouselItems is empty.
+	ci := threads.CarouselItem{
+		MediaType:         post.MediaType,
+		Images:            post.Images,
+		Videos:            post.Videos,
+		VideoDashManifest: post.VideoDashManifest,
+		NumberOfQualities: post.NumberOfQualities,
+		IsDashEligible:    post.IsDashEligible,
+	}
+	// mediaNote's default branch (MediaType not 1/2/8) still returns
+	// "[media: attached]" when Images/Videos are present; route by which
+	// list is present so the slide type matches the text.
+	if ci.MediaType != mediaTypeImage && ci.MediaType != mediaTypeVideo {
+		if len(post.Videos) > 0 {
+			ci.MediaType = mediaTypeVideo
+		} else {
+			ci.MediaType = mediaTypeImage
+		}
+	}
+	return []media.Slide{buildSlide(ci, maxSize)}
 }

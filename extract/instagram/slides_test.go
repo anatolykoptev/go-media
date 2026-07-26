@@ -62,11 +62,15 @@ func photoSlideCands() []threads.MediaVersion {
 // video_versions: 3 renditions, the first 720x900 (highest here).
 func videoSlideVersions() []threads.MediaVersion {
 	return []threads.MediaVersion{
-		{URL: "https://cdn.example.com/vv_720.mp4", Width: 720, Height: 900},
+		{URL: videoSlideHiResURL, Width: 720, Height: 900},
 		{URL: "https://cdn.example.com/vv_480.mp4", Width: 480, Height: 600},
 		{URL: "https://cdn.example.com/vv_360.mp4", Width: 360, Height: 450},
 	}
 }
+
+// videoSlideHiResURL is the highest-resolution video_versions rendition used
+// across the slide and chain-media tests (const so goconst is satisfied).
+const videoSlideHiResURL = "https://cdn.example.com/vv_720.mp4"
 
 // TestBuildSlidePhotoPicksHighestResolution: a photo slide must choose the
 // highest-resolution image candidate (1080x1350), not the first.
@@ -127,7 +131,7 @@ func TestBuildSlideVideoVP9ManifestFallsBackToVideoVersions(t *testing.T) {
 	}
 	// Must be the highest-resolution video_versions rendition (720x900), NOT
 	// a VP9 manifest URL.
-	if s.URL != "https://cdn.example.com/vv_720.mp4" {
+	if s.URL != videoSlideHiResURL {
 		t.Fatalf("URL = %q, want video_versions H.264 fallback (manifest is VP9-only)", s.URL)
 	}
 	if s.AudioURL != "" {
@@ -140,7 +144,7 @@ func TestBuildSlideVideoVP9ManifestFallsBackToVideoVersions(t *testing.T) {
 func TestBuildSlideVideoNoManifestUsesVideoVersions(t *testing.T) {
 	ci := threads.CarouselItem{MediaType: 2, Videos: videoSlideVersions()}
 	s := buildSlide(ci, 0)
-	if s.URL != "https://cdn.example.com/vv_720.mp4" {
+	if s.URL != videoSlideHiResURL {
 		t.Fatalf("URL = %q, want highest video_versions rendition", s.URL)
 	}
 	if s.AudioURL != "" {

@@ -259,6 +259,150 @@ func TestApplyChainTextMediaConsistency(t *testing.T) {
 	}
 }
 
+// flatImagePost builds a single-photo Threads post shaped like the
+// go-threads instagram.go embed path (instagram.go:438-440): MediaType=1,
+// Images populated, CarouselItems NEVER synthesised (nil). The rendered
+// mediaNote keys off MediaType → "[media: photo]", so the chain view must
+// carry that photo even though CarouselItems is empty.
+func flatImagePost(code string, text string) threads.Post {
+	return threads.Post{
+		Code:      code,
+		Text:      text,
+		MediaType: 1,
+		Author:    threads.ThreadsUser{ID: "999", Username: chainUser},
+		CreatedAt: time.UnixMilli(1500),
+		Images:    photoSlideCands(),
+		// CarouselItems intentionally nil — the instagram.go flat path.
+	}
+}
+
+// flatVideoPost builds a single-video Threads post shaped like the
+// go-threads instagram.go embed path (instagram.go:432-436): MediaType=2,
+// Videos populated, no VideoDashManifest (embed/SSR/proxy rungs never
+// carry one), CarouselItems NEVER synthesised (nil). mediaNote →
+// "[media: video]", so the chain view must carry that video.
+func flatVideoPost(code string, text string) threads.Post {
+	return threads.Post{
+		Code:      code,
+		Text:      text,
+		MediaType: 2,
+		Author:    threads.ThreadsUser{ID: "999", Username: chainUser},
+		CreatedAt: time.UnixMilli(3500),
+		Videos:    videoSlideVersions(),
+		// CarouselItems + VideoDashManifest intentionally nil — the flat path.
+	}
+}
+
+// mediaNoteNonEmpty replicates go-threads mediaNote's (chain.go:423-440)
+// decision rule — true iff the rendered chain text would emit a media note
+// for p. mediaNote is unexported in go-threads, so the invariant test
+// re-derives the SAME rule from the public Post fields rather than calling
+// it. Kept in lockstep with go-threads@v0.9.1 chain.go:423-440.
+func mediaNoteNonEmpty(p threads.Post) bool {
+	switch p.MediaType {
+	case 1, 2:
+		return true
+	case 8:
+		return true // "[media: carousel]" or "[media: carousel, N slides]"
+	default:
+		return len(p.Images) > 0 || len(p.Videos) > 0
+	}
+}
+
+// TestPostSlidesFlatImagePost: a chain post shaped like the instagram.go
+// embed path (MediaType=1, Images populated, CarouselItems empty) must
+// carry its photo as one image slide. Before the flat-list fallback,
+// postSlides ranged the empty CarouselItems and returned nil while
+// mediaNote advertised "[media: photo]" → RED.
+func TestPostSlidesFlatImagePost(t *testing.T) {
+	slides := postSlides(flatImagePost(chainCode1, "flat photo"), 0)
+	if len(slides) != 1 {
+		t.Fatalf("len(slides) = %d, want 1 (flat photo post must carry its photo)", len(slides))
+	}
+	if slides[0].Type != media.SlideTypeImage {
+		t.Fatalf("slides[0].Type = %d, want SlideTypeImage", slides[0].Type)
+	}
+	if slides[0].URL != photoHiResURL {
+		t.Fatalf("slides[0].URL = %q, want highest-res photo %q (bestImageVersion, mirroring populateMedia)", slides[0].URL, photoHiResURL)
+	}
+}
+
+// TestPostSlidesFlatVideoPost: a chain post shaped like the instagram.go
+// embed path (MediaType=2, Videos populated, CarouselItems empty, no
+// manifest) must carry its video as one video slide. Before the fallback,
+// postSlides returned nil while mediaNote advertised "[media: video]" →
+// RED.
+func TestPostSlidesFlatVideoPost(t *testing.T) {
+	slides := postSlides(flatVideoPost(chainCode1, "flat video"), 0)
+	if len(slides) != 1 {
+		t.Fatalf("len(slides) = %d, want 1 (flat video post must carry its video)", len(slides))
+	}
+	if slides[0].Type != media.SlideTypeVideo {
+		t.Fatalf("slides[0].Type = %d, want SlideTypeVideo", slides[0].Type)
+	}
+	// bestVideoVersion picks the highest-resolution rendition (720x900).
+	if slides[0].URL != videoSlideHiResURL {
+		t.Fatalf("slides[0].URL = %q, want highest-res video_versions rendition", slides[0].URL)
+	}
+}
+
+// TestPostSlidesCarouselNotDuplicatedFromFlatLists: a post whose
+// CarouselItems IS populated (the parsers.go convertPost shape) must carry
+// exactly len(CarouselItems) slides — the flattened Images/Videos MUST NOT
+// be unioned in, since parsers.go:563-572 already flattened every carousel
+// slide into Images/Videos and a naive union would duplicate each slide.
+// Regression guard for the fallback: GREEN before and after the fix
+// (postSlides already ranged only CarouselItems; the fix preserves that by
+// gating the flat fallback behind len(CarouselItems) == 0).
+func TestPostSlidesCarouselNotDuplicatedFromFlatLists(t *testing.T) {
+	p := carouselPost(chainCode1, "carousel")
+	// Simulate parsers.go flattening: pour every slide's candidates into
+	// the post-level Images/Videos too, so a union would double-count.
+	for _, ci := range p.CarouselItems {
+		p.Images = append(p.Images, ci.Images...)
+		p.Videos = append(p.Videos, ci.Videos...)
+	}
+	slides := postSlides(p, 0)
+	if len(slides) != len(p.CarouselItems) {
+		t.Fatalf("len(slides) = %d, want %d (= len(CarouselItems); flattened lists must NOT be unioned in)", len(slides), len(p.CarouselItems))
+	}
+}
+
+// TestApplyChainTextMediaInvariantBothDirections: for every chain post,
+// mediaNote(p) != "" ⟺ that post has at least one slide in the chain view.
+// Both directions: a post the text calls media-bearing must carry a slide,
+// AND a post the text calls text-only must carry none. Mixed chain =
+// carousel post + flat single-photo post (instagram.go shape) + text-only
+// post. Before the flat-list fallback, the flat photo post had
+// mediaNote="[media: photo]" but zero slides → invariant broke → RED.
+func TestApplyChainTextMediaInvariantBothDirections(t *testing.T) {
+	chain := &threads.Chain{
+		Username: chainUser,
+		AuthorID: "999",
+		Complete: true,
+		Posts: []threads.Post{
+			carouselPost(chainCode1, "carousel"),    // [media: carousel, 3 slides]
+			flatImagePost(chainCode2, "flat photo"), // [media: photo], CarouselItems empty
+			{Code: chainCode3, Text: "text only", Author: threads.ThreadsUser{ID: "999", Username: chainUser}, CreatedAt: time.UnixMilli(2500), CarouselItems: []threads.CarouselItem{}}, // text-only
+		},
+	}
+	m := &media.Media{Metadata: make(map[string]string)}
+
+	applyChain(m, chain, chainCode2, 0)
+
+	if len(m.Posts) != len(chain.Posts) {
+		t.Fatalf("len(Posts) = %d, want %d (one entry per chain post)", len(m.Posts), len(chain.Posts))
+	}
+	for i, p := range chain.Posts {
+		note := mediaNoteNonEmpty(p)
+		hasSlide := len(m.Posts[i].Slides) > 0
+		if note != hasSlide {
+			t.Errorf("post %d (%q): mediaNote!=empty=%v but len(Slides)=%d — invariant mediaNote!=\"\" ⟺ ≥1 slide broken (both directions)",
+				i, p.Code, note, len(m.Posts[i].Slides))
+		}
+	}
+}
+
 // TestInstagramPathLeavesPostsNil: the chain path is Threads-only. The
 // Instagram branch of ExtractWithBudget never calls applyChain, so it must
 // leave m.Posts nil. This simulates that branch (the exact sequence
