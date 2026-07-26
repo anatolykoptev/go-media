@@ -64,10 +64,14 @@ func ExtractAudioChunk(ctx context.Context, videoPath, outputPath string, offset
 // pipeline's single-video and carousel-slide paths (via (*Processor).mergeDASH)
 // and by external callers (e.g. vaelor-agent's Threads chain-post delivery).
 //
-// On a mux or rename failure it returns (videoPath, err) — the caller decides
-// whether to degrade to video-only or treat the slide as failed. The audio
-// file is always cleaned up. On success the returned path equals videoPath
-// (the merged file was renamed over the original).
+// On a download or mux failure it returns (videoPath, err) — the original
+// video-only file is still on disk, so the caller may degrade to video-only
+// or treat the slide as failed. On a rename failure it returns (mergedPath,
+// err): os.Remove(videoPath) has already deleted the original, so the muxed
+// output exists only at mergedPath and the caller must recover it there (the
+// videoPath slot is empty). The audio file is always cleaned up. On success
+// the returned path equals videoPath (the merged file was renamed over the
+// original).
 func MergeDASH(ctx context.Context, client HTTPDoer, videoPath, audioURL string, maxSize int64) (string, error) {
 	audioPath := videoPath + ".audio.m4a"
 	if err := DownloadFile(ctx, client, audioURL, audioPath, maxSize); err != nil {
