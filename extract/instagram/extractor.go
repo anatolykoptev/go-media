@@ -13,9 +13,24 @@ import (
 	"github.com/anatolykoptev/go-media"
 )
 
+// urlPattern decomposes an Instagram or Threads post URL.
+//
+// Instagram post forms accepted: /p/<code>, /reel/<code>, /reels/<code>
+// (the profile-reels-tab share spelling — same content as /reel/), and
+// /tv/<code> (legacy IGTV, folded into Reels in 2022; shortcodes still
+// resolve in the same namespace as /p/ and /reel/). The shortcode capture
+// [A-Za-z0-9_-]+ stops at the next '/' or '?', so a trailing handle in
+// /reels/<code>/<handle> is NOT swallowed into the code.
+//
+// Intentionally NOT widened:
+//   - /stories/<user>/<numeric_id> — ephemeral, structurally different (no
+//     shortcode; a per-story numeric id tied to the viewer's session).
+//   - /share/<token> — an opaque redirect that must be resolved by the
+//     caller before it identifies any post.
+//   - a bare profile URL (instagram.com/<username>) — not a post.
 var urlPattern = regexp.MustCompile(
 	`https?://(?:www\.)?(?:` +
-		`instagram\.com/(?:p|reel)/([A-Za-z0-9_-]+)` +
+		`instagram\.com/(?:p|reels|reel|tv)/([A-Za-z0-9_-]+)` +
 		`|threads\.(?:net|com)/@([^/]+)/post/([A-Za-z0-9_-]+)` +
 		`)`,
 )

@@ -11,6 +11,12 @@ import (
 // fallbackVideoURL is the video_versions URL used across the fallback tests.
 const fallbackVideoURL = "https://cdn.instagram.com/720.mp4"
 
+// reelsTVProbeCode is the shortcode used by the /reels/ and /tv/ parsing
+// tests. Kept as a const so goconst does not double-count it across the
+// /reel/ vs /reels/ parity cases (which deliberately reuse the same code to
+// prove the two spellings resolve identically).
+const reelsTVProbeCode = "CabcDEF123"
+
 // dashManifestFixture mirrors the structure tested in extract/dash: four video
 // representations 240p→1080p, one audio, 30s duration, absolute BaseURLs.
 const dashManifestFixture = `<?xml version="1.0" encoding="UTF-8"?>
@@ -45,9 +51,28 @@ func TestMatch(t *testing.T) {
 		url  string
 		want bool
 	}{
+		// Existing accepted forms.
 		{"https://www.instagram.com/reel/ABC123/", true},
 		{"https://instagram.com/p/XYZ789/", true},
+		// /reels/<code> — the profile-reels-tab share spelling. Same
+		// content as /reel/<code>; must Match.
+		{"https://instagram.com/reels/CabcDEF123", true},
+		{"https://instagram.com/reels/CabcDEF123/some.handle", true},
+		{"https://instagram.com/reels/CabcDEF123/", true},
+		{"https://www.instagram.com/reels/CabcDEF123?igsh=abc", true},
+		// /tv/<code> — legacy IGTV, folded into Reels in 2022; shortcodes
+		// still resolve in the same namespace.
+		{"https://instagram.com/tv/Abc123", true},
+		// Threads.
 		{"https://www.threads.net/@user/post/ABC123", true},
+		// Rejected — intentionally NOT widened.
+		// /stories/<user>/<numeric_id> is ephemeral and structurally
+		// different (no shortcode); /share/... is an opaque redirect that
+		// must be resolved before it means anything; a bare profile URL is
+		// not a post. All three stay rejected.
+		{"https://instagram.com/stories/johndoe/1234567890", false},
+		{"https://instagram.com/share/abc123", false},
+		{"https://instagram.com/johndoe", false},
 		{"https://youtube.com/watch?v=123", false},
 		{"https://example.com/video", false},
 		{"not a url", false},
@@ -76,10 +101,50 @@ func TestParseURL(t *testing.T) {
 			url:    "https://instagram.com/p/XYZ-789_abc/",
 			igCode: "XYZ-789_abc",
 		},
+		// /reels/<code> must yield the same shortcode as /reel/<code>.
+		{
+			url:    "https://instagram.com/reels/CabcDEF123",
+			igCode: reelsTVProbeCode,
+		},
+		// /reels/<code>/<handle> — the trailing handle must NOT be
+		// swallowed into the shortcode; the capture must stop at the
+		// following '/'.
+		{
+			url:    "https://instagram.com/reels/CabcDEF123/some.handle",
+			igCode: reelsTVProbeCode,
+		},
+		// /reels/<code>/ with trailing slash and query tail.
+		{
+			url:    "https://www.instagram.com/reels/CabcDEF123/?igsh=abc",
+			igCode: reelsTVProbeCode,
+		},
+		// /tv/<code> — legacy IGTV, same shortcode namespace as /p/ and /reel/.
+		{
+			url:    "https://instagram.com/tv/Abc123",
+			igCode: "Abc123",
+		},
+		// /reel/<code> and /reels/<code> must resolve to the SAME code.
+		{
+			url:    "https://instagram.com/reel/CabcDEF123/",
+			igCode: reelsTVProbeCode,
+		},
 		{
 			url:         "https://www.threads.net/@johndoe/post/DEF456",
 			threadsUser: "johndoe",
 			threadsCode: "DEF456",
+		},
+		// Rejected forms must error — not silently extract a wrong code.
+		{
+			url:     "https://instagram.com/stories/johndoe/1234567890",
+			wantErr: true,
+		},
+		{
+			url:     "https://instagram.com/share/abc123",
+			wantErr: true,
+		},
+		{
+			url:     "https://instagram.com/johndoe",
+			wantErr: true,
 		},
 		{
 			url:     "https://youtube.com/watch?v=123",
