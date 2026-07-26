@@ -13,19 +13,9 @@ import (
 	media "github.com/anatolykoptev/go-media"
 )
 
-// requireFFmpegForMux fails the test loudly when ffmpeg is not in PATH. The
-// real DASH mux runs ffmpeg; skipping would leave the mux path with zero
-// coverage (green-over-skipped). Download/rename failure branches do not need
-// ffmpeg and do not call this.
-//
-// NOTE: processor_transcribe_test.go defines its own requireFFmpeg that uses
-// t.Skipf — adjacent skip-to-green issue, not fixed here.
-func requireFFmpegForMux(t *testing.T) {
-	t.Helper()
-	if _, err := exec.LookPath("ffmpeg"); err != nil {
-		t.Fatalf("ffmpeg required for DASH mux test but not in PATH: %v", err)
-	}
-}
+// requireFFmpeg lives in audio_test.go (shared helper — fail loudly, never
+// skip). The mux path needs ffmpeg; the shared helper also requires ffprobe,
+// which is always co-installed with ffmpeg and is a harmless strengthening.
 
 // genVideoOnly writes a video-only MP4 (no audio stream) at path using ffmpeg.
 func genVideoOnly(t *testing.T, ctx context.Context, path string) {
@@ -74,7 +64,7 @@ func audioServer(t *testing.T, srcPath string) *httptest.Server {
 // returned path equals videoPath. ffmpeg is a hard precondition — the test
 // FAILs (never skips) when it is missing.
 func TestMergeDASHDirectMuxesAndReplacesVideoPath(t *testing.T) {
-	requireFFmpegForMux(t)
+	requireFFmpeg(t)
 	ctx := context.Background()
 	tmp := t.TempDir()
 
@@ -152,7 +142,7 @@ func TestMergeDASHDownloadFailureReturnsVideoPathIntact(t *testing.T) {
 // (audio file is not a valid stream), MergeDASH must return (videoPath, err)
 // with the original video file intact and the audio temp file cleaned up.
 func TestMergeDASHMuxFailureReturnsVideoPathIntact(t *testing.T) {
-	requireFFmpegForMux(t)
+	requireFFmpeg(t)
 	ctx := context.Background()
 	tmp := t.TempDir()
 
@@ -210,7 +200,7 @@ func TestMergeDASHMuxFailureReturnsVideoPathIntact(t *testing.T) {
 // kept here to (a) pin the audio-temp cleanup on this failure mode and (b)
 // document the rename contract above — the only portable way to assert it.
 func TestMergeDASHRenameFailureContract(t *testing.T) {
-	requireFFmpegForMux(t)
+	requireFFmpeg(t)
 	ctx := context.Background()
 	tmp := t.TempDir()
 

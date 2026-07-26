@@ -28,17 +28,7 @@ func (s *stubTranscriber) Transcribe(_ context.Context, _ string) (*media.Transc
 	return &media.Transcription{Text: s.text}, nil
 }
 
-// requireFFmpeg skips the test if ffmpeg or ffprobe is not on PATH.
-// ChunkAndTranscribe runs both, so a stub transcriber alone cannot reach the
-// Transcribe call without them.
-func requireFFmpeg(t *testing.T) {
-	t.Helper()
-	for _, bin := range []string{"ffmpeg", "ffprobe"} {
-		if _, err := exec.LookPath(bin); err != nil {
-			t.Skipf("%s not in PATH", bin)
-		}
-	}
-}
+// requireFFmpeg lives in audio_test.go (shared helper — fail loudly, never skip).
 
 // makeTinyVideo writes a 1-second black + silent-audio MP4 at path.
 // ChunkAndTranscribe needs a real container ffprobe can parse and a real audio

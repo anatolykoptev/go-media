@@ -16,9 +16,20 @@ func hasFFmpeg() bool {
 	return err == nil
 }
 
-func hasFFprobe() bool {
-	_, err := exec.LookPath("ffprobe")
-	return err == nil
+// requireFFmpeg fails the test loudly when ffmpeg or ffprobe is not on PATH.
+// Both are required test dependencies, provisioned in CI (see preflight.yml);
+// skipping on a missing binary is green-over-skipped — fail instead so an
+// under-provisioned environment is reported, not silently tested less.
+// The inverse no-ffmpeg tests (TestExtractAudioChunkNoFFmpeg,
+// TestExtractVideoClipNoFFmpeg) use hasFFmpeg directly to gate the ABSENCE
+// path and must NOT call this.
+func requireFFmpeg(t *testing.T) {
+	t.Helper()
+	for _, bin := range []string{"ffmpeg", "ffprobe"} {
+		if _, err := exec.LookPath(bin); err != nil {
+			t.Fatalf("%s not in PATH — required test dependency; install ffmpeg (e.g. `sudo apt-get install -y ffmpeg`), CI provisions it: %v", bin, err)
+		}
+	}
 }
 
 // unavailableTranscriber implements media.Transcriber with Available() = false.
@@ -73,9 +84,7 @@ func TestChunkAndTranscribeUnavailable(t *testing.T) {
 }
 
 func TestExtractAudioChunkIntegration(t *testing.T) {
-	if !hasFFmpeg() || !hasFFprobe() {
-		t.Skip("ffmpeg/ffprobe not available")
-	}
+	requireFFmpeg(t)
 
 	ctx := context.Background()
 	tmpDir := t.TempDir()
