@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.11](https://github.com/anatolykoptev/go-media/compare/v0.3.10...v0.3.11) (2026-07-26)
+
+
+### Fixed
+
+* **instagram:** accept /reels/ and /tv/ post URL forms ([#42](https://github.com/anatolykoptev/go-media/issues/42)) ([ec25298](https://github.com/anatolykoptev/go-media/commit/ec252980f1f6741bf201ae5a584c9725fc24bec6))
+
 ## [0.3.10](https://github.com/anatolykoptev/go-media/compare/v0.3.9...v0.3.10) (2026-07-26)
 
 
