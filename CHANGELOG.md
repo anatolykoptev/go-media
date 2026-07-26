@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.10](https://github.com/anatolykoptev/go-media/compare/v0.3.9...v0.3.10) (2026-07-26)
+
+
+### Added
+
+* **instagram:** carry per-post media for Threads chains ([#41](https://github.com/anatolykoptev/go-media/issues/41)) ([1b2638a](https://github.com/anatolykoptev/go-media/commit/1b2638afdac4c52e28aa925fabf6d5da1092706b))
+
+
+### Fixed
+
+* bump go-threads to v0.9.1 for GetAuthorChain false-incompleteness fix ([#39](https://github.com/anatolykoptev/go-media/issues/39)) ([f027678](https://github.com/anatolykoptev/go-media/commit/f0276787d5297b425c37d4d7ac3f09b7a24c010d))
+
 ## [0.3.9](https://github.com/anatolykoptev/go-media/compare/v0.3.8...v0.3.9) (2026-07-25)
 
 
