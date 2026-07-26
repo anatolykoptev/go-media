@@ -10,9 +10,7 @@ import (
 )
 
 func TestExtractVideoClipsPaddingAndClamping(t *testing.T) {
-	if !hasFFmpeg() {
-		t.Skip("ffmpeg not available")
-	}
+	requireFFmpeg(t)
 
 	ctx := context.Background()
 	tmpDir := t.TempDir()
@@ -64,9 +62,7 @@ func TestExtractVideoClipsPaddingAndClamping(t *testing.T) {
 }
 
 func TestExtractVideoClipsPaddingClampsToZero(t *testing.T) {
-	if !hasFFmpeg() {
-		t.Skip("ffmpeg not available")
-	}
+	requireFFmpeg(t)
 
 	ctx := context.Background()
 	tmpDir := t.TempDir()

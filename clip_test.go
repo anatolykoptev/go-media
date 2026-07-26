@@ -34,9 +34,7 @@ func TestExtractVideoClipNoFFmpeg(t *testing.T) {
 }
 
 func TestExtractVideoClipIntegration(t *testing.T) {
-	if !hasFFmpeg() || !hasFFprobe() {
-		t.Skip("ffmpeg/ffprobe not available")
-	}
+	requireFFmpeg(t)
 
 	ctx := context.Background()
 	tmpDir := t.TempDir()
@@ -79,9 +77,7 @@ func TestExtractVideoClipIntegration(t *testing.T) {
 }
 
 func TestExtractVideoClipsFromChunksSkipsEmptyText(t *testing.T) {
-	if !hasFFmpeg() {
-		t.Skip("ffmpeg not available")
-	}
+	requireFFmpeg(t)
 
 	ctx := context.Background()
 	tmpDir := t.TempDir()
