@@ -30,6 +30,23 @@ type Media struct {
 	// photo slides). The processor downloads every slide and reports the local
 	// paths in Result.Slides, in the same order.
 	Slides []Slide
+	// Posts carries the per-post media of a Threads author chain, in chain
+	// writing order (one PostMedia per chain post). It is populated ONLY by
+	// the Threads chain path (applyChain); the Instagram single-post path
+	// leaves it nil so existing Instagram consumers are byte-identical.
+	//
+	// Additive to Slides: the LINKED post's downloadable media still lands in
+	// VideoURL/AudioURL/Qualities/Slides (above) so the single-video pipeline
+	// (transcription, DASH mux, clips) runs unchanged. Posts is the chain-wide
+	// seam — a consumer answers "which media belongs to post i" by indexing
+	// Posts[i].Slides. The linked post's media therefore appears in BOTH
+	// Slides (single-post pipeline) and Posts[linkedIndex].Slides (chain
+	// view); the redundancy is intentional (two seams, two purposes).
+	//
+	// nil for a text-only chain (no empty scaffolding). For a mixed chain a
+	// text-only post has a PostMedia entry with nil Slides so chain-position
+	// indexing stays aligned with RenderChain's [i/N] prefix.
+	Posts []PostMedia
 }
 
 // SlideType is the per-slide media kind of a carousel slide.
@@ -53,6 +70,21 @@ type Slide struct {
 	AudioURL string // separate audio URL (DASH video slides only)
 	Width    int
 	Height   int
+}
+
+// PostMedia is the media carried for one post of a Threads author chain.
+// Index is the 0-based position of the post in chain writing order, matching
+// the [i/N] prefix go-threads RenderChain emits, so a consumer can correlate
+// a PostMedia entry with the rendered text. Code is the post's short code
+// (links the entry back to the chain post). Slides is the per-slide view of
+// that post's media — one Slide per CarouselItem, in slide order, built by
+// the same buildSlide path as the linked post's carousel — so a consumer has
+// ONE download path for carousel, single-photo, and single-video posts.
+// nil for a text-only post within a mixed chain.
+type PostMedia struct {
+	Index  int     // 0-based chain position (matches RenderChain [i/N])
+	Code   string  // the post's short code
+	Slides []Slide // per-slide media, in slide order; nil for text-only
 }
 
 // MediaStats holds engagement metrics for a media post.

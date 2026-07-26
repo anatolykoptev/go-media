@@ -38,6 +38,17 @@ const h264SlideManifest = `<?xml version="1.0" encoding="UTF-8"?>
 // photo-slide tests (extracted as a const so goconst is satisfied).
 const photoHiResURL = "https://cdn.example.com/photo_1080.jpg"
 
+// slideDash1080pURL is the H.264 1080p DASH rep URL the slide/chain tests
+// assert buildSlide picks from h264SlideManifest (const so goconst is
+// satisfied across the slide and chain-media tests).
+const slideDash1080pURL = "https://slide-cdn.example.com/1080p.mp4"
+
+// dash1080pVideoURL is the H.264 1080p DASH rep URL the single-video and
+// chain tests assert populateVideoURL / buildSlide pick from
+// dashManifestFixture (const so goconst is satisfied across the
+// extractor, slide, and chain-media tests).
+const dash1080pVideoURL = "https://video-edge-1080p.example.com/video.mp4"
+
 // photoSlideCands mirrors carousel_photo_DFeH7jYt2tv's per-slide image
 // candidates: 2 candidates, the first 1080x1350 (highest), the second smaller.
 func photoSlideCands() []threads.MediaVersion {
@@ -91,7 +102,7 @@ func TestBuildSlideVideoDASHSelectsH264(t *testing.T) {
 	if s.Type != media.SlideTypeVideo {
 		t.Fatalf("Type = %d, want SlideTypeVideo", s.Type)
 	}
-	if s.URL != "https://slide-cdn.example.com/1080p.mp4" {
+	if s.URL != slideDash1080pURL {
 		t.Fatalf("URL = %q, want DASH 1080p H.264 rep (dash.Select exercised)", s.URL)
 	}
 	if s.AudioURL != "https://slide-cdn.example.com/audio.m4a" {
@@ -187,7 +198,7 @@ func TestPopulateMediaVideoCarousel(t *testing.T) {
 		if s.Type != media.SlideTypeVideo {
 			t.Errorf("slide %d Type = %d, want SlideTypeVideo", i, s.Type)
 		}
-		if s.URL != "https://slide-cdn.example.com/1080p.mp4" {
+		if s.URL != slideDash1080pURL {
 			t.Errorf("slide %d URL = %q, want DASH H.264 1080p", i, s.URL)
 		}
 		if s.AudioURL != "https://slide-cdn.example.com/audio.m4a" {
@@ -270,7 +281,7 @@ func TestPopulateMediaSingleVideoUnchanged(t *testing.T) {
 	if len(m.Slides) != 0 {
 		t.Fatalf("len(Slides) = %d, want 0 (single video stays on VideoURL path)", len(m.Slides))
 	}
-	if m.VideoURL != "https://video-edge-1080p.example.com/video.mp4" {
+	if m.VideoURL != dash1080pVideoURL {
 		t.Fatalf("VideoURL = %q, want DASH 1080p (existing single-video path)", m.VideoURL)
 	}
 }
