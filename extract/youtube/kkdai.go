@@ -26,7 +26,7 @@ func (b *kkdaiBackend) extract(ctx context.Context, videoID string, maxHeight in
 	}
 
 	m := &media.Media{
-		Platform:    "youtube",
+		Platform:    platformName,
 		Title:       video.Title,
 		Author:      video.Author,
 		Description: video.Description,
