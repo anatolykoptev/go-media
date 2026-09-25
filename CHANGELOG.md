@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.14](https://github.com/anatolykoptev/go-media/compare/v0.3.13...v0.3.14) (2026-09-25)
+
+
+### Added
+
+* Options.MaxTotalSize per-call byte budget + propagate source_method ([#50](https://github.com/anatolykoptev/go-media/issues/50)) ([af922a4](https://github.com/anatolykoptev/go-media/commit/af922a478ba24f393ad17b469923040f39210e04))
+
 ## [0.3.13](https://github.com/anatolykoptev/go-media/compare/v0.3.12...v0.3.13) (2026-09-25)
 
 
