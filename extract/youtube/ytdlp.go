@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	media "github.com/anatolykoptev/go-media"
@@ -83,7 +85,13 @@ func (b *ytdlpBackend) download(
 		LocalPath: outputPath,
 	}
 
-	infoPath := outputPath + ".info.json"
+	// yt-dlp writes the sidecar as <basename>.info.json — it REPLACES the
+	// media extension rather than appending (youtube_x.mp4 ->
+	// youtube_x.info.json). Older releases sometimes appended, so probe both.
+	infoPath := strings.TrimSuffix(outputPath, filepath.Ext(outputPath)) + ".info.json"
+	if _, err := os.Stat(infoPath); err != nil {
+		infoPath = outputPath + ".info.json"
+	}
 	if err := b.populateFromInfoJSON(m, infoPath); err != nil {
 		// Download succeeded but metadata extraction failed — return the
 		// media with a warning wrapped in the error so the consumer can
