@@ -190,3 +190,30 @@ func TestProcessorProcessThreadsMaxSizeToExtractor(t *testing.T) {
 		t.Fatalf("extractor received MaxSize=%d, want %d", bx.gotMaxSize, budget)
 	}
 }
+
+// TestProcessSingleVideo_MaxTotalSizeClampsDownload asserts the per-call
+// budget applies to the single-video path too: one artifact gets the
+// min(per-file, total) cap, so a video over MaxTotalSize errors even when it
+// is under MaxSize.
+func TestProcessSingleVideo_MaxTotalSizeClampsDownload(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "video/mp4")
+		_, _ = w.Write(make([]byte, 10))
+	}))
+	defer srv.Close()
+
+	p := media.NewProcessor(
+		media.WithExtractor(&mockExtractor{
+			name:    "test",
+			matches: true,
+			media:   &media.Media{Platform: "test", VideoURL: srv.URL + "/video.mp4"},
+		}),
+		media.WithHTTPClient(srv.Client()),
+	)
+
+	_, err := p.Process(context.Background(), "https://test.com/post/1",
+		media.Options{TempDir: t.TempDir(), MaxSize: 100, MaxTotalSize: 5})
+	if err == nil {
+		t.Fatal("expected a size-cap error for a 10-byte video under a 5-byte call budget")
+	}
+}
