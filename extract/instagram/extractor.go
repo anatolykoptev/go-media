@@ -104,6 +104,19 @@ func (e *Extractor) ExtractWithBudget(ctx context.Context, rawURL string, maxSiz
 		return nil, fmt.Errorf("instagram: no post data found")
 	}
 
+	m.Metadata["code"] = igCode
+	applyThread(m, thread, maxSize)
+
+	return m, nil
+}
+
+// applyThread maps a fetched thread onto m — description, author, stats, media
+// — and propagates the transport tier (thread.SourceMethod →
+// Metadata["source_method"]) so downstream callers can tell an authenticated
+// CDP extraction from a degraded anonymous embed/proxy rung. The key is the
+// contract media_download reads to detect "a thumbnail arrived wearing a clean
+// success"; an empty SourceMethod writes nothing (absence is itself the signal).
+func applyThread(m *media.Media, thread *threads.Thread, maxSize int64) {
 	post := thread.Items[0]
 	m.Description = post.Text
 
@@ -114,10 +127,10 @@ func (e *Extractor) ExtractWithBudget(ctx context.Context, rawURL string, maxSiz
 		}
 	}
 	m.Stats = mapStats(post)
-	m.Metadata["code"] = igCode
+	if thread.SourceMethod != "" {
+		m.Metadata["source_method"] = thread.SourceMethod
+	}
 	populateMedia(m, post, maxSize)
-
-	return m, nil
 }
 
 // parseURL extracts shortcode/username from an Instagram or Threads URL.
