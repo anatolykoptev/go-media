@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.13](https://github.com/anatolykoptev/go-media/compare/v0.3.12...v0.3.13) (2026-09-25)
+
+
+### Fixed
+
+* **youtube:** read the yt-dlp sidecar at its real path ([#48](https://github.com/anatolykoptev/go-media/issues/48)) ([eb5877f](https://github.com/anatolykoptev/go-media/commit/eb5877f203ae6b7b1eaee5c546cbf789d36effb4))
+
 ## [0.3.12](https://github.com/anatolykoptev/go-media/compare/v0.3.11...v0.3.12) (2026-09-25)
 
 
