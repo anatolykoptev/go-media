@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.12](https://github.com/anatolykoptev/go-media/compare/v0.3.11...v0.3.12) (2026-09-25)
+
+
+### Added
+
+* **youtube:** DisableKkdai to skip uninterruptible goja tier ([#46](https://github.com/anatolykoptev/go-media/issues/46)) ([8436c3d](https://github.com/anatolykoptev/go-media/commit/8436c3d48a8986fb236691e32fc8bcb430d40464))
+
 ## [0.3.11](https://github.com/anatolykoptev/go-media/compare/v0.3.10...v0.3.11) (2026-07-26)
 
 
