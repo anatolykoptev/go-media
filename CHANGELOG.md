@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.15](https://github.com/anatolykoptev/go-media/compare/v0.3.14...v0.3.15) (2026-10-02)
+
+
+### Fixed
+
+* **deps:** bump go-threads to v0.10.2 ([#54](https://github.com/anatolykoptev/go-media/issues/54)) ([a78e43e](https://github.com/anatolykoptev/go-media/commit/a78e43e52218cdfd7d92703e13b9aeeec989e936))
+
 ## [0.3.14](https://github.com/anatolykoptev/go-media/compare/v0.3.13...v0.3.14) (2026-09-25)
 
 
