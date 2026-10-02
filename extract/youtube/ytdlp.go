@@ -80,7 +80,7 @@ func (b *ytdlpBackend) download(
 	}
 
 	m := &media.Media{
-		Platform:  "youtube",
+		Platform:  platformName,
 		URL:       videoURL,
 		LocalPath: outputPath,
 	}

@@ -38,8 +38,14 @@ jobs:
       - name: Install ffmpeg
         run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
 
-      - name: Install govulncheck
-        run: GOWORK=off go install golang.org/x/vuln/cmd/govulncheck@latest
+      - name: Install govulncheck (pinned v1.6.0)
+        # Pinned (ci-setup gostall pattern: never @latest). Idempotent —
+        # no-op when the pinned version is already present, self-heals on
+        # a fresh runner.
+        run: |
+          BIN="$(go env GOPATH)/bin/govulncheck"
+          go version -m "$BIN" 2>/dev/null | grep -q "v1.6.0" \
+            || GOWORK=off go install golang.org/x/vuln/cmd/govulncheck@v1.6.0
 
       - name: make preflight
         run: make preflight
