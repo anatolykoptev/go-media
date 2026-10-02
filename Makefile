@@ -1,7 +1,7 @@
 .PHONY: build test test-short lint preflight clean
 
 # Pinned CI tool versions (ci-setup gostall pattern: never @latest).
-GOLANGCI_LINT_VERSION := v2.12.2
+GOLANGCI_LINT_VERSION := v2.14.0
 GOVULNCHECK_VERSION := v1.6.0
 
 # Resolve the binary itself — never assume `go install` lands on PATH
