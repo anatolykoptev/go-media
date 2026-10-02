@@ -8,6 +8,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 
 	media "github.com/anatolykoptev/go-media"
@@ -91,6 +93,16 @@ func TestMergeDASHDirectMuxesAndReplacesVideoPath(t *testing.T) {
 	}
 	if info.Size() == 0 {
 		t.Fatal("merged video file is empty")
+	}
+	// The mux must have added the audio: a plain copy of the video-only
+	// input would pass every check above.
+	out, err := exec.CommandContext(ctx, "ffprobe", "-v", "error", "-select_streams", "a",
+		"-show_entries", "stream=codec_type", "-of", "csv=p=0", videoPath).Output()
+	if err != nil {
+		t.Fatalf("ffprobe merged file: %v", err)
+	}
+	if strings.TrimSpace(string(out)) != "audio" {
+		t.Fatalf("merged file has no audio stream (ffprobe: %q)", out)
 	}
 	if _, err := os.Stat(videoPath + ".merged.mp4"); !errors.Is(err, os.ErrNotExist) {
 		t.Errorf("leftover .merged.mp4: stat err=%v, want ErrNotExist", err)
@@ -176,60 +188,82 @@ func TestMergeDASHMuxFailureReturnsVideoPathIntact(t *testing.T) {
 	}
 }
 
-// TestMergeDASHRenameFailureContract asserts the rename-failure contract.
-//
-// RENAME CONTRACT (conclusion): on a rename failure MergeDASH returns
-// (mergedPath, err) — NOT videoPath — because the muxed output lives at
-// mergedPath and the caller must recover it from there; videoPath is
-// indeterminate (os.Remove was already attempted, error ignored). This is
-// deliberate and correct, and the consumer (vaelor-agent) ships against it.
-// The doc comment on MergeDASH documents this contract.
-//
-// PORTABILITY LIMITATION: a pure rename-only failure (mux succeeds, rename
-// fails) cannot be portably triggered in a unit test because mergedPath =
-// videoPath + ".merged.mp4" shares the same directory as videoPath — anything
-// that makes os.Rename fail (read-only parent, non-empty-dir destination, full
-// filesystem) also makes the mux's mergedPath creation fail first. Triggering
-// it requires root (read-only bind mount) or filesystem interposition, neither
-// available in a non-root test. The consumer's own test suite
-// (vaelor-agent/pkg/media/merge_dash_test.go) does not test this path either.
-//
-// This test makes videoPath a non-empty directory, which causes the MUX to
-// fail (ffmpeg cannot read a directory as input). That exercises the
-// mux-failure branch (returns videoPath, err), not the rename branch. It is
-// kept here to (a) pin the audio-temp cleanup on this failure mode and (b)
-// document the rename contract above — the only portable way to assert it.
-func TestMergeDASHRenameFailureContract(t *testing.T) {
-	requireFFmpeg(t)
-	ctx := context.Background()
+// shimFFmpeg puts a fake ffmpeg first on PATH for the rest of the test. The
+// script gets MergeAudioVideo's argv (-i VIDEO -i AUDIO -c copy -y OUT), so
+// "$2" is the video path and the last argument is the output path.
+func shimFFmpeg(t *testing.T, body string) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX shell shim")
+	}
+	dir := t.TempDir()
+	script := "#!/bin/sh\nvideo=\"$2\"\nfor a in \"$@\"; do out=\"$a\"; done\n" + body + "\n"
+	if err := os.WriteFile(filepath.Join(dir, "ffmpeg"), []byte(script), 0o700); err != nil { //nolint:gosec // test shim must be executable
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+}
+
+// dashFixture is a video-only placeholder and an audio server; the shim never
+// reads either, so their bytes do not matter.
+func dashFixture(t *testing.T) (videoPath, audioURL string, client *http.Client) {
+	t.Helper()
 	tmp := t.TempDir()
-
+	videoPath = filepath.Join(tmp, "slide.mp4")
 	audioSrc := filepath.Join(tmp, "audio.m4a")
-	genAudioM4A(t, ctx, audioSrc)
+	for _, p := range []string{videoPath, audioSrc} {
+		if err := os.WriteFile(p, []byte("placeholder"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
 	srv := audioServer(t, audioSrc)
+	return videoPath, srv.URL + "/audio.m4a", srv.Client()
+}
 
-	// videoPath as a non-empty directory: ffmpeg cannot read it as input,
-	// so the mux fails (returns videoPath, err). A pure rename-only failure
-	// is not portably triggerable — see the comment above.
-	videoPath := filepath.Join(tmp, "slide.mp4")
-	if err := os.MkdirAll(videoPath, 0o750); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(videoPath, "blocker"), []byte("x"), 0o600); err != nil {
-		t.Fatal(err)
-	}
+// TestMergeDASHRenameFailureReturnsMergedPath: the mux succeeds, then the
+// rename over videoPath fails. MergeDASH has already removed videoPath, so it
+// must return (mergedPath, err) — the muxed output is the only copy left, and
+// vaelor-agent's delivery path recovers it from there. The shim writes the
+// output and then turns videoPath into a non-empty directory: os.Remove fails
+// (ignored) and os.Rename onto it fails.
+func TestMergeDASHRenameFailureReturnsMergedPath(t *testing.T) {
+	shimFFmpeg(t, `printf muxed > "$out"; rm -f "$video"; mkdir -p "$video/blocker"`)
+	videoPath, audioURL, client := dashFixture(t)
 
-	got, err := media.MergeDASH(ctx, srv.Client(), videoPath, srv.URL+"/audio.m4a", 0)
+	got, err := media.MergeDASH(context.Background(), client, videoPath, audioURL, 0)
+	if err == nil || !strings.Contains(err.Error(), "rename merged file") {
+		t.Fatalf("want a rename failure, got %v", err)
+	}
+	mergedPath := videoPath + ".merged.mp4"
+	if got != mergedPath {
+		t.Fatalf("returned path = %q, want mergedPath %q (videoPath is gone)", got, mergedPath)
+	}
+	if b, rerr := os.ReadFile(mergedPath); rerr != nil || string(b) != "muxed" {
+		t.Fatalf("muxed output not kept at mergedPath: %q, %v", b, rerr)
+	}
+	if _, serr := os.Stat(videoPath + ".audio.m4a"); !errors.Is(serr, os.ErrNotExist) {
+		t.Errorf("leftover .audio.m4a: stat err=%v, want ErrNotExist", serr)
+	}
+}
+
+// TestMergeDASHMuxFailureRemovesPartialOutput: ffmpeg dies after writing part
+// of the output (a timeout or cancellation kill). MergeDASH returns videoPath,
+// so a partial .merged.mp4 left behind would never be found by the caller.
+func TestMergeDASHMuxFailureRemovesPartialOutput(t *testing.T) {
+	shimFFmpeg(t, `printf partial > "$out"; exit 1`)
+	videoPath, audioURL, client := dashFixture(t)
+
+	got, err := media.MergeDASH(context.Background(), client, videoPath, audioURL, 0)
 	if err == nil {
-		t.Fatal("expected error for non-readable videoPath, got nil")
+		t.Fatal("want a mux failure, got nil")
 	}
-	// Mux-failure branch: returns videoPath (not mergedPath). The
-	// rename-failure branch (unreachable here) would return mergedPath.
 	if got != videoPath {
-		t.Fatalf("RENAME CONTRACT: returned path = %q, want videoPath %q (mux-failure branch; rename-only failure would return mergedPath — see portability comment)", got, videoPath)
+		t.Fatalf("returned path = %q, want videoPath %q", got, videoPath)
 	}
-	// Audio temp must be cleaned regardless of which branch failed.
-	if _, err := os.Stat(videoPath + ".audio.m4a"); !errors.Is(err, os.ErrNotExist) {
-		t.Errorf("leftover .audio.m4a after failure: stat err=%v, want ErrNotExist", err)
+	if _, serr := os.Stat(videoPath + ".merged.mp4"); !errors.Is(serr, os.ErrNotExist) {
+		t.Errorf("partial .merged.mp4 left behind: stat err=%v, want ErrNotExist", serr)
+	}
+	if b, rerr := os.ReadFile(videoPath); rerr != nil || string(b) != "placeholder" {
+		t.Errorf("videoPath not intact after a mux failure: %q, %v", b, rerr)
 	}
 }
