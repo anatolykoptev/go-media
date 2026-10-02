@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.16](https://github.com/anatolykoptev/go-media/compare/v0.3.15...v0.3.16) (2026-10-02)
+
+
+### Added
+
+* export MergeDASH for external DASH mux ([#45](https://github.com/anatolykoptev/go-media/issues/45)) ([10a7fb5](https://github.com/anatolykoptev/go-media/commit/10a7fb5c79d99cc80febac865a9d06a1747c0a4c))
+
+
+### Fixed
+
+* **deps:** bump go-threads to v0.10.3 ([#57](https://github.com/anatolykoptev/go-media/issues/57)) ([3e02bd1](https://github.com/anatolykoptev/go-media/commit/3e02bd1bb54c3edce469727bba1b5ed28f3e357c))
+
 ## [0.3.15](https://github.com/anatolykoptev/go-media/compare/v0.3.14...v0.3.15) (2026-10-02)
 
 
