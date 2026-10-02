@@ -303,3 +303,39 @@ func TestProcessTextOnlyNoPanic(t *testing.T) {
 		t.Fatal("expected error for text-only post, got nil")
 	}
 }
+
+// TestProcessSlides_MaxTotalSizeBoundsTheAlbum asserts the per-call budget
+// stops an album whose per-slide sizes each pass the per-file cap — N x
+// MaxSize unchecked was the disk-fill hole behind go-wowa#93.
+//
+// mutation: slides.go — delete the remainingCap/exhausted guard → slide 2
+// downloads 3 more bytes past the 3-byte call budget and succeeds → RED.
+func TestProcessSlides_MaxTotalSizeBoundsTheAlbum(t *testing.T) {
+	const n = 3
+	srv := slideServer(t, n) // /slide{i} serves i+1 bytes: 1, 2, 3
+	tmp := t.TempDir()
+	p := media.NewProcessor(
+		media.WithExtractor(&mockExtractor{name: "test", matches: true, media: slideMedia(photoSlides(srv.URL, n)...)}),
+		media.WithHTTPClient(srv.Client()),
+	)
+
+	res, err := p.Process(context.Background(), "https://test.com/p/1",
+		media.Options{TempDir: tmp, MaxSize: 100, MaxTotalSize: 3})
+
+	// Slides 0+1 fit exactly (1+2 = 3); slide 2 hits the exhausted budget.
+	if res.Slides[0].Err != nil {
+		t.Errorf("Slides[0].Err = %v, want nil", res.Slides[0].Err)
+	}
+	if res.Slides[1].Err != nil {
+		t.Errorf("Slides[1].Err = %v, want nil", res.Slides[1].Err)
+	}
+	if res.Slides[2].Err == nil {
+		t.Fatal("Slides[2].Err = nil — the call budget was not enforced")
+	}
+	if !errors.Is(err, &media.SlideError{}) && err == nil {
+		t.Fatal("expected a SlideError for the failed slide, got nil")
+	}
+	if _, isSlideErr := err.(*media.SlideError); !isSlideErr {
+		t.Fatalf("err type = %T, want *SlideError", err)
+	}
+}

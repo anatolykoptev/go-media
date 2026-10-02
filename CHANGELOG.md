@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.3.15](https://github.com/anatolykoptev/go-media/compare/v0.3.14...v0.3.15) (2026-10-02)
+
+
+### Fixed
+
+* **deps:** bump go-threads to v0.10.2 ([#54](https://github.com/anatolykoptev/go-media/issues/54)) ([a78e43e](https://github.com/anatolykoptev/go-media/commit/a78e43e52218cdfd7d92703e13b9aeeec989e936))
+
+## [0.3.14](https://github.com/anatolykoptev/go-media/compare/v0.3.13...v0.3.14) (2026-09-25)
+
+
+### Added
+
+* Options.MaxTotalSize per-call byte budget + propagate source_method ([#50](https://github.com/anatolykoptev/go-media/issues/50)) ([af922a4](https://github.com/anatolykoptev/go-media/commit/af922a478ba24f393ad17b469923040f39210e04))
+
+## [0.3.13](https://github.com/anatolykoptev/go-media/compare/v0.3.12...v0.3.13) (2026-09-25)
+
+
+### Fixed
+
+* **youtube:** read the yt-dlp sidecar at its real path ([#48](https://github.com/anatolykoptev/go-media/issues/48)) ([eb5877f](https://github.com/anatolykoptev/go-media/commit/eb5877f203ae6b7b1eaee5c546cbf789d36effb4))
+
+## [0.3.12](https://github.com/anatolykoptev/go-media/compare/v0.3.11...v0.3.12) (2026-09-25)
+
+
+### Added
+
+* **youtube:** DisableKkdai to skip uninterruptible goja tier ([#46](https://github.com/anatolykoptev/go-media/issues/46)) ([8436c3d](https://github.com/anatolykoptev/go-media/commit/8436c3d48a8986fb236691e32fc8bcb430d40464))
+
 ## [0.3.11](https://github.com/anatolykoptev/go-media/compare/v0.3.10...v0.3.11) (2026-07-26)
 
 

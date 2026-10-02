@@ -76,26 +76,9 @@ func (p *Processor) processSingleVideo(ctx context.Context, m *Media, url string
 		return nil, fmt.Errorf("create temp dir: %w", err)
 	}
 
-	var videoPath string
-
-	if m.LocalPath != "" {
-		// Extractor already downloaded the file (e.g. yt-dlp)
-		videoPath = m.LocalPath
-	} else {
-		// Download video
-		videoPath = filepath.Join(tempDir, fmt.Sprintf("%s_%s.mp4", m.Platform, sanitizeFilename(url)))
-		if err := DownloadFile(ctx, p.httpClient, m.VideoURL, videoPath, opts.MaxSize); err != nil {
-			return nil, fmt.Errorf("download: %w", err)
-		}
-
-		// DASH: merge separate audio stream if present
-		if m.AudioURL != "" {
-			var err error
-			videoPath, err = p.mergeDASH(ctx, videoPath, m.AudioURL, opts.MaxSize)
-			if err != nil {
-				return nil, fmt.Errorf("dash merge: %w", err)
-			}
-		}
+	videoPath, err := p.downloadVideo(ctx, m, url, tempDir, opts)
+	if err != nil {
+		return nil, err
 	}
 
 	// Transcribe (optional)
@@ -126,6 +109,41 @@ func (p *Processor) processSingleVideo(ctx context.Context, m *Media, url string
 		Transcription: transcription,
 		VideoClips:    clips,
 	}, nil
+}
+
+// downloadVideo fetches the media file — or accepts the extractor-downloaded
+// LocalPath — under the per-call budget, merging a separate DASH audio track
+// when present. Returns the surviving artifact path.
+func (p *Processor) downloadVideo(ctx context.Context, m *Media, url, tempDir string, opts Options) (string, error) {
+	if m.LocalPath != "" {
+		// Extractor already downloaded the file (e.g. yt-dlp) — the total
+		// budget still applies to the artifact on disk.
+		if opts.MaxTotalSize > 0 && fileSize(m.LocalPath) > opts.MaxTotalSize {
+			return "", fmt.Errorf("video exceeds per-call budget: %d bytes (limit %d)",
+				fileSize(m.LocalPath), opts.MaxTotalSize)
+		}
+		return m.LocalPath, nil
+	}
+
+	videoPath := filepath.Join(tempDir, fmt.Sprintf("%s_%s.mp4", m.Platform, sanitizeFilename(url)))
+	if err := DownloadFile(ctx, p.httpClient, m.VideoURL, videoPath, opts.remainingCap(0)); err != nil {
+		return "", fmt.Errorf("download: %w", err)
+	}
+
+	// DASH: merge separate audio stream if present; the audio counts toward
+	// the same per-call budget.
+	if m.AudioURL == "" {
+		return videoPath, nil
+	}
+	audioCap := opts.remainingCap(fileSize(videoPath))
+	if opts.MaxTotalSize > 0 && audioCap <= 0 {
+		return "", fmt.Errorf("dash merge: per-call budget exhausted (%d bytes)", opts.MaxTotalSize)
+	}
+	merged, err := p.mergeDASH(ctx, videoPath, m.AudioURL, audioCap)
+	if err != nil {
+		return "", fmt.Errorf("dash merge: %w", err)
+	}
+	return merged, nil
 }
 
 // Platforms returns names of all registered extractors.

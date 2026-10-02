@@ -408,3 +408,24 @@ func TestPopulateMediaVP9OnlyManifestFallsBackToVideoVersions(t *testing.T) {
 		t.Fatalf("Qualities: got %d, want 2 (video_versions), not VP9 manifest reps", len(m.Qualities))
 	}
 }
+
+// TestApplyThread_PropagatesSourceMethod pins the Metadata["source_method"]
+// contract go-wowa media_download reads to detect a degraded anonymous
+// extraction arriving as a clean success (go-wowa#97). An empty SourceMethod
+// must write nothing — absence is the signal, not "unknown".
+func TestApplyThread_PropagatesSourceMethod(t *testing.T) {
+	m := &media.Media{Platform: "instagram", Metadata: map[string]string{}}
+	applyThread(m, &threads.Thread{
+		SourceMethod: "embed",
+		Items:        []threads.Post{{Text: "hello"}},
+	}, 0)
+	if got := m.Metadata["source_method"]; got != "embed" {
+		t.Fatalf("Metadata[source_method] = %q, want %q", got, "embed")
+	}
+
+	noTier := &media.Media{Platform: "instagram", Metadata: map[string]string{}}
+	applyThread(noTier, &threads.Thread{Items: []threads.Post{{Text: "x"}}}, 0)
+	if _, ok := noTier.Metadata["source_method"]; ok {
+		t.Fatal("empty SourceMethod must not write the key — absence is the degradation signal")
+	}
+}

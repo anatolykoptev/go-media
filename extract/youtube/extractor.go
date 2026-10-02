@@ -40,6 +40,11 @@ type Config struct {
 	CookiesFile  string // path to cookies.txt for age-restricted content (ytdlp backend only)
 	Proxy        string // HTTP proxy URL for downloads (ytdlp backend only; kkdai and ox-browser do not support proxy)
 	TempDir      string // temp directory for yt-dlp downloads
+	// DisableKkdai skips tier 1 (kkdai/youtube). kkdai deciphers signatures by
+	// evaluating YouTube-supplied base.js inside a goja VM with no Interrupt —
+	// a pathological or hostile script pins a core and leaks the goroutine,
+	// unreachable by ctx. Set this to run yt-dlp/ox-browser tiers only.
+	DisableKkdai bool
 }
 
 // maxVideoHeight is the default maximum video height for kkdai backend.
@@ -55,9 +60,9 @@ type Extractor struct {
 
 // New creates a YouTube extractor with the given configuration.
 func New(cfg Config) *Extractor {
-	e := &Extractor{
-		cfg: cfg,
-		kkd: &kkdaiBackend{},
+	e := &Extractor{cfg: cfg}
+	if !cfg.DisableKkdai {
+		e.kkd = &kkdaiBackend{}
 	}
 	if cfg.YtdlpPath != "" {
 		e.ydlp = &ytdlpBackend{binaryPath: cfg.YtdlpPath}
@@ -95,10 +100,12 @@ func (e *Extractor) ExtractWithBudget(ctx context.Context, rawURL string, maxSiz
 	}
 
 	// Tier 1: kkdai/youtube — fast, pure Go.
-	m, err := e.kkd.extract(ctx, videoID, maxVideoHeight)
-	if err == nil {
-		m.URL = rawURL
-		return m, nil
+	if e.kkd != nil {
+		var m *media.Media
+		if m, err = e.kkd.extract(ctx, videoID, maxVideoHeight); err == nil {
+			m.URL = rawURL
+			return m, nil
+		}
 	}
 
 	// Tier 2: go-ytdlp — reliable subprocess download.
@@ -124,6 +131,9 @@ func (e *Extractor) ExtractWithBudget(ctx context.Context, rawURL string, maxSiz
 		err = fmt.Errorf("%w; %w", err, oxErr)
 	}
 
+	if err == nil {
+		return nil, fmt.Errorf("youtube: no backends configured")
+	}
 	return nil, fmt.Errorf("youtube: all backends failed: %w", err)
 }
 
