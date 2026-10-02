@@ -1,5 +1,59 @@
 # Changelog
 
+## [0.3.15](https://github.com/anatolykoptev/go-media/compare/v0.3.14...v0.3.15) (2026-10-02)
+
+
+### Fixed
+
+* **deps:** bump go-threads to v0.10.2 ([#54](https://github.com/anatolykoptev/go-media/issues/54)) ([a78e43e](https://github.com/anatolykoptev/go-media/commit/a78e43e52218cdfd7d92703e13b9aeeec989e936))
+
+## [0.3.14](https://github.com/anatolykoptev/go-media/compare/v0.3.13...v0.3.14) (2026-09-25)
+
+
+### Added
+
+* Options.MaxTotalSize per-call byte budget + propagate source_method ([#50](https://github.com/anatolykoptev/go-media/issues/50)) ([af922a4](https://github.com/anatolykoptev/go-media/commit/af922a478ba24f393ad17b469923040f39210e04))
+
+## [0.3.13](https://github.com/anatolykoptev/go-media/compare/v0.3.12...v0.3.13) (2026-09-25)
+
+
+### Fixed
+
+* **youtube:** read the yt-dlp sidecar at its real path ([#48](https://github.com/anatolykoptev/go-media/issues/48)) ([eb5877f](https://github.com/anatolykoptev/go-media/commit/eb5877f203ae6b7b1eaee5c546cbf789d36effb4))
+
+## [0.3.12](https://github.com/anatolykoptev/go-media/compare/v0.3.11...v0.3.12) (2026-09-25)
+
+
+### Added
+
+* **youtube:** DisableKkdai to skip uninterruptible goja tier ([#46](https://github.com/anatolykoptev/go-media/issues/46)) ([8436c3d](https://github.com/anatolykoptev/go-media/commit/8436c3d48a8986fb236691e32fc8bcb430d40464))
+
+## [0.3.11](https://github.com/anatolykoptev/go-media/compare/v0.3.10...v0.3.11) (2026-07-26)
+
+
+### Fixed
+
+* **instagram:** accept /reels/ and /tv/ post URL forms ([#42](https://github.com/anatolykoptev/go-media/issues/42)) ([ec25298](https://github.com/anatolykoptev/go-media/commit/ec252980f1f6741bf201ae5a584c9725fc24bec6))
+
+## [0.3.10](https://github.com/anatolykoptev/go-media/compare/v0.3.9...v0.3.10) (2026-07-26)
+
+
+### Added
+
+* **instagram:** carry per-post media for Threads chains ([#41](https://github.com/anatolykoptev/go-media/issues/41)) ([1b2638a](https://github.com/anatolykoptev/go-media/commit/1b2638afdac4c52e28aa925fabf6d5da1092706b))
+
+
+### Fixed
+
+* bump go-threads to v0.9.1 for GetAuthorChain false-incompleteness fix ([#39](https://github.com/anatolykoptev/go-media/issues/39)) ([f027678](https://github.com/anatolykoptev/go-media/commit/f0276787d5297b425c37d4d7ac3f09b7a24c010d))
+
+## [0.3.9](https://github.com/anatolykoptev/go-media/compare/v0.3.8...v0.3.9) (2026-07-25)
+
+
+### Added
+
+* **instagram:** merge full Threads author chain into extracted Media ([#36](https://github.com/anatolykoptev/go-media/issues/36)) ([ca91629](https://github.com/anatolykoptev/go-media/commit/ca91629dcf756d0b46f74e1fddbd471dc1ee6e4b))
+
 ## [0.3.8](https://github.com/anatolykoptev/go-media/compare/v0.3.7...v0.3.8) (2026-07-25)
 
 

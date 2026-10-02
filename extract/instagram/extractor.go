@@ -13,10 +13,25 @@ import (
 	"github.com/anatolykoptev/go-media"
 )
 
+// urlPattern decomposes an Instagram or Threads post URL.
+//
+// Instagram post forms accepted: /p/<code>, /reel/<code>, /reels/<code>
+// (the profile-reels-tab share spelling — same content as /reel/), and
+// /tv/<code> (legacy IGTV, folded into Reels in 2022; shortcodes still
+// resolve in the same namespace as /p/ and /reel/). The shortcode capture
+// [A-Za-z0-9_-]+ stops at the next '/' or '?', so a trailing handle in
+// /reels/<code>/<handle> is NOT swallowed into the code.
+//
+// Intentionally NOT widened:
+//   - /stories/<user>/<numeric_id> — ephemeral, structurally different (no
+//     shortcode; a per-story numeric id tied to the viewer's session).
+//   - /share/<token> — an opaque redirect that must be resolved by the
+//     caller before it identifies any post.
+//   - a bare profile URL (instagram.com/<username>) — not a post.
 var urlPattern = regexp.MustCompile(
 	`https?://(?:www\.)?(?:` +
-		`instagram\.com/(?:p|reel)/([A-Za-z0-9_-]+)` +
-		`|threads\.net/@([^/]+)/post/([A-Za-z0-9_-]+)` +
+		`instagram\.com/(?:p|reels|reel|tv)/([A-Za-z0-9_-]+)` +
+		`|threads\.(?:net|com)/@([^/]+)/post/([A-Za-z0-9_-]+)` +
 		`)`,
 )
 
@@ -44,55 +59,78 @@ func (e *Extractor) Extract(ctx context.Context, rawURL string) (*media.Media, e
 // representation that fits the byte budget (0 = no limit). When the post
 // carries no DASH manifest (embed/SSR/proxy rungs) or the manifest is
 // unparseable, it falls back to the video_versions behaviour unchanged.
+//
+// For Threads URLs the whole author chain is fetched (go-threads
+// GetAuthorChain) and merged into one text via applyChain; for Instagram
+// URLs the behaviour is byte-identical to the pre-chain implementation
+// (GetInstagramPost, Description = post.Text, no chain scaffolding).
 func (e *Extractor) ExtractWithBudget(ctx context.Context, rawURL string, maxSize int64) (*media.Media, error) {
 	igCode, threadsUser, threadsCode, err := parseURL(rawURL)
 	if err != nil {
 		return nil, fmt.Errorf("instagram: %w", err)
 	}
 
-	var thread *threads.Thread
-	if threadsUser != "" {
-		thread, _, err = e.client.GetThread(ctx, threadsUser, threadsCode)
-	} else {
-		thread, err = e.client.GetInstagramPost(ctx, igCode)
+	m := &media.Media{
+		Platform: "instagram",
+		URL:      rawURL,
+		Metadata: make(map[string]string),
 	}
+
+	if threadsUser != "" {
+		// Threads: fetch the whole author chain and merge it. The chain
+		// carries every same-author post in writing order plus an honest
+		// completeness flag; applyChain puts the rendered text into
+		// Description and the linked post's downloadable media into the
+		// single-video / slide slots. GetThread's reply threads are no
+		// longer discarded.
+		chain, err := e.client.GetAuthorChain(ctx, threadsUser, threadsCode)
+		if err != nil {
+			return nil, fmt.Errorf("instagram: fetch chain: %w", err)
+		}
+		if chain == nil || len(chain.Posts) == 0 {
+			return nil, fmt.Errorf("instagram: no post data found")
+		}
+		applyChain(m, chain, threadsCode, maxSize)
+		return m, nil
+	}
+
+	// Instagram: unchanged. GetInstagramPost + Description = post.Text, no
+	// chain scaffolding — byte-identical to the pre-chain implementation.
+	thread, err := e.client.GetInstagramPost(ctx, igCode)
 	if err != nil {
 		return nil, fmt.Errorf("instagram: fetch post: %w", err)
 	}
-
 	if thread == nil || len(thread.Items) == 0 {
 		return nil, fmt.Errorf("instagram: no post data found")
 	}
 
+	m.Metadata["code"] = igCode
+	applyThread(m, thread, maxSize)
+
+	return m, nil
+}
+
+// applyThread maps a fetched thread onto m — description, author, stats, media
+// — and propagates the transport tier (thread.SourceMethod →
+// Metadata["source_method"]) so downstream callers can tell an authenticated
+// CDP extraction from a degraded anonymous embed/proxy rung. The key is the
+// contract media_download reads to detect "a thumbnail arrived wearing a clean
+// success"; an empty SourceMethod writes nothing (absence is itself the signal).
+func applyThread(m *media.Media, thread *threads.Thread, maxSize int64) {
 	post := thread.Items[0]
+	m.Description = post.Text
 
-	m := &media.Media{
-		Platform:    "instagram",
-		URL:         rawURL,
-		Description: post.Text,
-		Metadata:    make(map[string]string),
-	}
-
-	// Author info
 	if post.Author.Username != "" {
 		m.Author = "@" + post.Author.Username
 		if post.Author.FullName != "" {
 			m.Author = post.Author.FullName + " (@" + post.Author.Username + ")"
 		}
 	}
-
-	// Engagement stats
 	m.Stats = mapStats(post)
-
-	code := igCode
-	if code == "" {
-		code = threadsCode
+	if thread.SourceMethod != "" {
+		m.Metadata["source_method"] = thread.SourceMethod
 	}
-	m.Metadata["code"] = code
-
 	populateMedia(m, post, maxSize)
-
-	return m, nil
 }
 
 // parseURL extracts shortcode/username from an Instagram or Threads URL.
