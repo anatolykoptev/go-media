@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.17](https://github.com/anatolykoptev/go-media/compare/v0.3.16...v0.3.17) (2026-10-10)
+
+
+### Added
+
+* **youtube:** injectable HTTP client for ox-browser calls ([#59](https://github.com/anatolykoptev/go-media/issues/59)) ([57e417a](https://github.com/anatolykoptev/go-media/commit/57e417a83f585708fe7b80128de77dc400445d9e))
+
 ## [0.3.16](https://github.com/anatolykoptev/go-media/compare/v0.3.15...v0.3.16) (2026-10-02)
 
 
