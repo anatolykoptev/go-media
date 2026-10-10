@@ -37,6 +37,10 @@ var videoIDPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{11}$`)
 type Config struct {
 	YtdlpPath    string // path to yt-dlp binary (empty = skip tier 2)
 	OxBrowserURL string // ox-browser base URL (empty = skip tier 3)
+	// OxHTTPClient is the client used for ox-browser calls; wrap its Transport
+	// with go-kit svcauth to authenticate (X-Internal-Secret). nil = a plain
+	// http.Client{} (no timeout; the per-request ctx bounds the call).
+	OxHTTPClient *http.Client
 	CookiesFile  string // path to cookies.txt for age-restricted content (ytdlp backend only)
 	Proxy        string // HTTP proxy URL for downloads (ytdlp backend only; kkdai and ox-browser do not support proxy)
 	TempDir      string // temp directory for yt-dlp downloads
@@ -72,7 +76,11 @@ func New(cfg Config) *Extractor {
 		e.ydlp = &ytdlpBackend{binaryPath: cfg.YtdlpPath}
 	}
 	if cfg.OxBrowserURL != "" {
-		e.ox = &oxBackend{baseURL: cfg.OxBrowserURL, client: &http.Client{}}
+		cl := cfg.OxHTTPClient
+		if cl == nil {
+			cl = &http.Client{}
+		}
+		e.ox = &oxBackend{baseURL: cfg.OxBrowserURL, client: cl}
 	}
 	return e
 }
