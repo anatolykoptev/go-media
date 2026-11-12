@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.18](https://github.com/anatolykoptev/go-media/compare/v0.3.17...v0.3.18) (2026-11-12)
+
+
+### Documentation
+
+* bring repository documents up to the repo-standards set ([#62](https://github.com/anatolykoptev/go-media/issues/62)) ([9ebe44e](https://github.com/anatolykoptev/go-media/commit/9ebe44e42868654aa5704479b2f1584e1e9ca4c2))
+
 ## [0.3.17](https://github.com/anatolykoptev/go-media/compare/v0.3.16...v0.3.17) (2026-10-10)
 
 
