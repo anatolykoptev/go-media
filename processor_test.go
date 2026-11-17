@@ -166,11 +166,9 @@ func TestProcessorProcessThreadsMaxSizeToExtractor(t *testing.T) {
 
 	const budget = 42_000_000
 	bx := &mockBudgetExtractor{
-		mockExtractor: mockExtractor{
-			name:    "test",
-			matches: true,
-			media:   &media.Media{Platform: "test", VideoURL: srv.URL + "/video.mp4"},
-		},
+		name:    "test",
+		matches: true,
+		media:   &media.Media{Platform: "test", VideoURL: srv.URL + "/video.mp4"},
 	}
 
 	tmpDir := t.TempDir()

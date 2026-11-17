@@ -117,11 +117,9 @@ func TestRegistryPlatforms(t *testing.T) {
 func TestRegistryExtractWithBudgetRoutesToBudgetAware(t *testing.T) {
 	r := media.NewRegistry()
 	bx := &mockBudgetExtractor{
-		mockExtractor: mockExtractor{
-			name:    "test",
-			matches: true,
-			media:   &media.Media{Platform: "test", VideoURL: "https://cdn.test.com/v.mp4"},
-		},
+		name:    "test",
+		matches: true,
+		media:   &media.Media{Platform: "test", VideoURL: "https://cdn.test.com/v.mp4"},
 	}
 	r.Register(bx)
 
