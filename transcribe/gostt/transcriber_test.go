@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	stt "github.com/anatolykoptev/go-stt"
+	stt "github.com/anatolykoptev/go-kit/voice/stt"
 )
 
 func TestTranscribeSuccess(t *testing.T) {

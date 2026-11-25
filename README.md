@@ -65,7 +65,7 @@ func main() {
 
 | Backend | Package |
 |---------|---------|
-| Any OpenAI-compatible speech-to-text service, through the go-stt client | `transcribe/gostt` |
+| Any OpenAI-compatible speech-to-text service, through the go-kit voice/stt client | `transcribe/gostt` |
 
 Beyond `Process`, the root package exports the building blocks: `Extract` (resolve a URL to a
 `Media` without downloading), `DownloadFile`, `ExtractAudioChunk`, `ChunkAndTranscribe`,
