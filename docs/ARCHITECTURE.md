@@ -46,7 +46,7 @@ go-media/
 │
 ├── transcribe/        # Transcription backends (each implements Transcriber)
 │   ├── openai/        # OpenAI-compatible HTTP (ox-whisper, Groq)
-│   └── gostt/         # go-stt wrapper
+│   └── gostt/         # go-kit voice/stt wrapper
 │
 └── docs/
 ```

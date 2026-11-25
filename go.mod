@@ -3,7 +3,7 @@ module github.com/anatolykoptev/go-media
 go 1.27.3
 
 require (
-	github.com/anatolykoptev/go-stt v0.3.0
+	github.com/anatolykoptev/go-kit v0.97.24
 	github.com/anatolykoptev/go-threads v0.10.3
 	github.com/kkdai/youtube/v2 v2.10.5
 	github.com/lrstanley/go-ytdlp v1.3.3
@@ -11,7 +11,6 @@ require (
 
 require (
 	github.com/ProtonMail/go-crypto v1.3.0 // indirect
-	github.com/anatolykoptev/go-kit v0.97.19 // indirect
 	github.com/anatolykoptev/go-stealth v1.29.0 // indirect
 	github.com/andybalholm/brotli v1.2.7 // indirect
 	github.com/bdandy/go-errors v1.2.2 // indirect

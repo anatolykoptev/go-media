@@ -1,16 +1,16 @@
-// Package gostt provides a Transcriber that wraps the go-stt client library.
+// Package gostt provides a Transcriber that wraps the go-kit voice/stt client.
 package gostt
 
 import (
 	"context"
 	"fmt"
 
-	stt "github.com/anatolykoptev/go-stt"
+	stt "github.com/anatolykoptev/go-kit/voice/stt"
 
 	"github.com/anatolykoptev/go-media"
 )
 
-// Transcriber wraps a go-stt Client for OpenAI-compatible STT services.
+// Transcriber wraps a go-kit voice/stt Client for OpenAI-compatible STT services.
 type Transcriber struct {
 	client *stt.Client
 }
@@ -18,7 +18,7 @@ type Transcriber struct {
 // Option configures the Transcriber.
 type Option func(*stt.Client)
 
-// New creates a Transcriber using go-stt.
+// New creates a Transcriber using go-kit voice/stt.
 // baseURL is the STT service endpoint (e.g. "http://localhost:8092").
 func New(baseURL string, opts ...stt.Option) *Transcriber {
 	return &Transcriber{

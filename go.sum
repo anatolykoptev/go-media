@@ -2,12 +2,10 @@ github.com/Masterminds/semver/v3 v3.2.1 h1:RN9w6+7QoMeJVGyfmbcgs28Br8cvmnucEXnY0
 github.com/Masterminds/semver/v3 v3.2.1/go.mod h1:qvl/7zhW3nngYb5+80sSMF+FG2BjYrf8m9wsX0PNOMQ=
 github.com/ProtonMail/go-crypto v1.3.0 h1:ILq8+Sf5If5DCpHQp4PbZdS1J7HDFRXz/+xKBiRGFrw=
 github.com/ProtonMail/go-crypto v1.3.0/go.mod h1:9whxjD8Rbs29b4XWbB8irEcE8KHMqaR2e7GWU1R+/PE=
-github.com/anatolykoptev/go-kit v0.97.19 h1:SYpvEdYfwnzoPpNZBdSL0U2IVhsd0GfNY10KplV8kx4=
-github.com/anatolykoptev/go-kit v0.97.19/go.mod h1:YzADfXVpzihE6j+v4WuiQYU4EuCPI8sXxrZdhexTaH0=
+github.com/anatolykoptev/go-kit v0.97.24 h1:57LvK0kf02HuUr145UxHZHCUjaUBWkaJFZ9jtiH/+Ok=
+github.com/anatolykoptev/go-kit v0.97.24/go.mod h1:UggcOlHEI7khAi8FUdUM5LwvEyfsEWWbm3J2VuWSDFg=
 github.com/anatolykoptev/go-stealth v1.29.0 h1:Go6n+6G20Fmud3k5p6Q5x7OzKMk+tvrr8P+7FOsm+uQ=
 github.com/anatolykoptev/go-stealth v1.29.0/go.mod h1:dAxiYvPsPu6P1PIMLaAbyJUjZ068HzzTZK9OH9xZFas=
-github.com/anatolykoptev/go-stt v0.3.0 h1:Mo+tg4Z7wNlVUwZ1Tlrga8MXGIgy4Trx9CE+orzSO7o=
-github.com/anatolykoptev/go-stt v0.3.0/go.mod h1:ZBaKmLsDVOogdZwOzSq5np7gBzS9IsbaTzn1iMvDxp0=
 github.com/anatolykoptev/go-threads v0.10.3 h1:D3cSalsBJavXWUVf5NpRT1yFhInIl5mmfoW44NmtE4g=
 github.com/anatolykoptev/go-threads v0.10.3/go.mod h1:1LEIII/gQC/YabHNtFcNSJrkDn2s6a83+yYoCBVynOU=
 github.com/andybalholm/brotli v1.2.7 h1:UgafRPGMam5ySHfRkhthMqOFA6IFoeF3D7mWIDLjG5A=
@@ -46,8 +44,6 @@ github.com/kkdai/youtube/v2 v2.10.5 h1:22v6qas+/gEhZVmkqAa8fBsLhUsJA5HPDA+mSFkUB
 github.com/kkdai/youtube/v2 v2.10.5/go.mod h1:pm4RuJ2tRIIaOvz4YMIpCY8Ls4Fm7IVtnZQyule61MU=
 github.com/klauspost/compress v1.20.3 h1:zWNoFqq/lSuYQRim3dUXlXeA0IqwuZGicdG5ZTfY5j4=
 github.com/klauspost/compress v1.20.3/go.mod h1:LUdAzn7YLVvxLpc7y3V1m40wESHTgc1422pwwBSKYuI=
-github.com/leanovate/gopter v0.2.11 h1:vRjThO1EKPb/1NsDXuDrzldR28RLkBflWYcU9CvzWu4=
-github.com/leanovate/gopter v0.2.11/go.mod h1:aK3tzZP/C+p1m3SPRE4SYZFGP7jjkuSI4f7Xvpt0S9c=
 github.com/lrstanley/go-ytdlp v1.3.3 h1:Y9kJcdTwskPWDiwONMIl501Dhi+OrTF7HHY6J6+Lbco=
 github.com/lrstanley/go-ytdlp v1.3.3/go.mod h1:VgjnTrvkTf+23JuySjyPq1iQ8ijSovBtTPpXH5XrLtI=
 github.com/molecule-man/go-brrr v1.3.1 h1:EwaJUzRIlp/dFmIpzq4J17CA5Zi5OHo2vOGmu09hF1w=

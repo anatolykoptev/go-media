@@ -37,7 +37,7 @@ make build   # build all packages
 | `extract/youtube` | YouTube extractor (kkdai → go-ytdlp → ox-browser fallback) |
 | `extract/twitter` | Twitter/X syndication — planned |
 | `extract/reddit` | Reddit DASH — planned |
-| `transcribe/gostt` | go-stt wrapper for OpenAI-compatible STT services (the separate `transcribe/openai` package was removed in #25) |
+| `transcribe/gostt` | go-kit voice/stt wrapper for OpenAI-compatible STT services (the separate `transcribe/openai` package was removed in #25) |
 | `extract/dash` | MPEG-DASH manifest parsing and representation selection |
 
 ## Gate
